@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
   AlertDialog, 
@@ -14,7 +14,7 @@ import {
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
 
-// Comprehensive Bank Database
+// Bank database constant
 const BANK_DATABASE = [
   { name: 'Markazi', title: 'اداره معاملات ریالی بانک مرکزی', bins: ['636795'] },
   { name: 'Sanat', title: 'بانک صنعت و معدن', bins: ['627961'] },
@@ -56,8 +56,9 @@ const BANK_DATABASE = [
 ];
 
 const BankCardAnalyzer = () => {
+  // State declarations
   const [inputData, setInputData] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -67,7 +68,7 @@ const BankCardAnalyzer = () => {
     direction: 'desc'
   });
 
-  // Utility Functions
+  // Utility functions
   const validateCardNumber = useCallback((cardNumber) => {
     const cleanNumber = cardNumber.replace(/\D/g, '');
     if (cleanNumber.length < 12 || cleanNumber.length > 19) return false;
@@ -94,56 +95,77 @@ const BankCardAnalyzer = () => {
     ) || BANK_DATABASE[BANK_DATABASE.length - 1];
   }, []);
 
-  // Combined Analysis Function
+  const extractCardAndAmount = useCallback((line) => {
+    // Remove any special characters except digits, dots, and commas
+    const cleanLine = line.replace(/[^\d.,\s]/g, ' ').trim();
+    
+    // Split by any number of spaces
+    const parts = cleanLine.split(/\s+/).filter(part => part.length > 0);
+    
+    if (parts.length === 0) return null;
+    
+    let cardNumber = null;
+    let amount = null;
+    
+    // Check each part to identify card number and amount
+    parts.forEach(part => {
+      // If it looks like a card number (12-19 digits)
+      if (/^\d{12,19}$/.test(part)) {
+        cardNumber = part;
+      }
+      // If it looks like an amount (numbers with optional decimals)
+      else if (/^\d+([.,]\d+)?$/.test(part)) {
+        amount = parseFloat(part.replace(',', '.'));
+      }
+    });
+    
+    // Return result only if we found at least a card number
+    if (cardNumber) {
+      return {
+        cardNumber,
+        amount: amount || 'No price'
+      };
+    }
+    
+    return null;
+  }, []);
+
+  // Analysis function
   const analyzeData = useCallback(() => {
     const transactionMap = new Map();
 
-    // First pass: collect all transactions and count repetitions
-    inputData.split('\n')
-      .forEach(line => {
-        const [part1, part2] = line.trim().split(/\s+/);
-        const isFirstCard = /^\d{12,19}$/.test(part1);
-        
-        const cardNumber = isFirstCard ? part1 : part2;
-        const amount = isFirstCard ? part2 : part1;
+    inputData.split('\n').forEach(line => {
+      const result = extractCardAndAmount(line);
+      if (!result) return;
+      
+      const { cardNumber, amount } = result;
+      
+      if (!validateCardNumber(cardNumber)) return;
 
-        if (!validateCardNumber(cardNumber)) return;
-
-        const parsedAmount = parseFloat(amount.replace(/,/g, ''));
-        if (isNaN(parsedAmount)) return;
-
-        if (!transactionMap.has(cardNumber)) {
-          transactionMap.set(cardNumber, {
-            cardNumber,
-            bank: identifyBank(cardNumber),
-            amounts: [parsedAmount],
-            repetitionCount: 1,
-            totalAmount: parsedAmount
-          });
-        } else {
-          const existing = transactionMap.get(cardNumber);
-          existing.amounts.push(parsedAmount);
-          existing.repetitionCount += 1;
-          existing.totalAmount += parsedAmount;
+      if (!transactionMap.has(cardNumber)) {
+        transactionMap.set(cardNumber, {
+          cardNumber,
+          bank: identifyBank(cardNumber),
+          amounts: amount === 'No price' ? ['No price'] : [amount],
+          repetitionCount: 1,
+          totalAmount: amount === 'No price' ? 'No price' : amount
+        });
+      } else {
+        const existing = transactionMap.get(cardNumber);
+        existing.amounts.push(amount);
+        existing.repetitionCount += 1;
+        if (amount !== 'No price') {
+          existing.totalAmount = existing.totalAmount === 'No price' ? 
+            amount : 
+            existing.totalAmount + amount;
         }
-      });
+      }
+    });
 
     setTransactions(Array.from(transactionMap.values()));
-  }, [inputData, identifyBank, validateCardNumber]);
+  }, [inputData, identifyBank, validateCardNumber, extractCardAndAmount]);
 
-  const handleSort = (key) => {
-    setSortConfig(prev => ({
-      key,
-      direction: 
-        prev.key === key 
-          ? prev.direction === 'desc' 
-            ? 'asc' 
-            : 'desc'
-          : 'desc'
-    }));
-  };
-
-  // Enhanced sorted and filtered transactions
+  // Sorting and filtering
   const sortedTransactions = useMemo(() => {
     const filtered = searchTerm
       ? transactions.filter(t => t.cardNumber.includes(searchTerm.replace(/\D/g, '')))
@@ -153,20 +175,23 @@ const BankCardAnalyzer = () => {
       const modifier = sortConfig.direction === 'desc' ? -1 : 1;
       
       if (sortConfig.key === 'amount') {
+        if (a.totalAmount === 'No price' && b.totalAmount === 'No price') return 0;
+        if (a.totalAmount === 'No price') return 1;
+        if (b.totalAmount === 'No price') return -1;
         return modifier * (a.totalAmount - b.totalAmount);
       }
       return modifier * (a.repetitionCount - b.repetitionCount);
     });
   }, [transactions, sortConfig, searchTerm]);
 
-  // Export Function
+  // Export function
   const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
     
     const data = sortedTransactions.map(t => ({
       'Card Number': t.cardNumber,
       'Bank': t.bank.title,
-      'Total Amount': t.totalAmount.toLocaleString(),
+      'Total Amount': typeof t.totalAmount === 'number' ? t.totalAmount.toLocaleString() : t.totalAmount,
       'Repetitions': t.repetitionCount,
       'Individual Amounts': t.amounts.join(', ')
     }));
@@ -176,7 +201,7 @@ const BankCardAnalyzer = () => {
     XLSX.writeFile(workbook, "bank_analysis.xlsx");
   };
 
-  // UI Handlers
+  // UI handlers
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -191,6 +216,19 @@ const BankCardAnalyzer = () => {
     setTransactions([]);
     setSearchTerm('');
   };
+
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: 
+        prev.key === key 
+          ? prev.direction === 'desc' 
+            ? 'asc' 
+            : 'desc'
+          : 'desc'
+    }));
+  };
+
   // Sort indicator component
   const SortIndicator = ({ currentKey, column }) => {
     if (sortConfig.key !== column) return <ArrowUpDown className="w-4 h-4 opacity-50" />;
@@ -198,6 +236,19 @@ const BankCardAnalyzer = () => {
       ? <ArrowDown className="w-4 h-4" /> 
       : <ArrowUp className="w-4 h-4" />;
   };
+   // Enhanced UI Components
+   const ActionButton = ({ onClick, icon: Icon, label, color }) => (
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white ${color} transition-all duration-200 shadow-lg hover:shadow-xl`}
+    >
+      <Icon className="w-5 h-5" />
+      <span>{label}</span>
+    </motion.button>
+  );
+
   return (
     <div className={`min-h-screen flex items-center justify-center p-4 transition-colors ${
       isDarkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white' 
@@ -255,7 +306,7 @@ const BankCardAnalyzer = () => {
                 isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
                           : 'border-blue-200 focus:ring-2 focus:ring-blue-500'
               }`}
-              placeholder="Enter card numbers and amounts (one per line, format: CARDNUMBER AMOUNT)"
+              placeholder="Enter card numbers and amounts (one per line, format: CARDNUMBER AMOUNT or AMOUNT CARDNUMBER)"
               value={inputData}
               onChange={(e) => setInputData(e.target.value)}
             />
@@ -303,7 +354,11 @@ const BankCardAnalyzer = () => {
                         } transition-colors`}>
                           <td className="p-2">{t.cardNumber}</td>
                           <td className="p-2">{t.bank.title}</td>
-                          <td className="p-2 text-right">{t.totalAmount.toLocaleString()}</td>
+                          <td className="p-2 text-right">
+                            {typeof t.totalAmount === 'number' ? 
+                              t.totalAmount.toLocaleString() : 
+                              t.totalAmount}
+                          </td>
                           <td className="p-2 text-center">{t.repetitionCount}</td>
                         </tr>
                       ))}
