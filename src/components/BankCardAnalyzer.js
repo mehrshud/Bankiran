@@ -2,19 +2,28 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search, FileSpreadsheet } from 'lucide-react';
+import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
+
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { 
   AlertDialog, 
-  AlertDialogAction, 
   AlertDialogContent, 
   AlertDialogDescription, 
   AlertDialogFooter, 
   AlertDialogHeader, 
-  AlertDialogTitle 
+  AlertDialogTitle,
+  AlertDialogAction 
 } from '@/components/ui/alert-dialog';
+import { 
+  Copy,
+  Printer,
+  RefreshCcw
+} from 'lucide-react';
 
-// Bank database constant
+
+// Bank database constant with Persian titles
 const BANK_DATABASE = [
   { name: 'Markazi', title: 'اداره معاملات ریالی بانک مرکزی', bins: ['636795'] },
   { name: 'Sanat', title: 'بانک صنعت و معدن', bins: ['627961'] },
@@ -23,55 +32,173 @@ const BANK_DATABASE = [
   { name: 'Maskan', title: 'بانک مسکن', bins: ['628023'] },
   { name: 'Sepah', title: 'بانک سپه', bins: ['589210'] },
   { name: 'Keshavarzi', title: 'بانک کشاورزی', bins: ['603770'] },
-  { name: 'Melli', title: 'بانک ملی ایران', bins: ['603799'] },
-  { name: 'Tejarat', title: 'بانک تجارت', bins: ['627353', '585983'] },
-  { name: 'Saderat', title: 'بانک صادرات ایران', bins: ['603769'] },
-  { name: 'ToseeSaderat', title: 'بانک توسعه صادرات ایران', bins: ['627648'] },
-  { name: 'Post', title: 'پست بانک', bins: ['627760'] },
-  { name: 'Taavon', title: 'بانک توسعه تعاون', bins: ['502908'] },
-  { name: 'Tosee', title: 'موسسه اعتباری توسعه', bins: ['628157'] },
-  { name: 'Karafarin', title: 'بانک کارآفرین', bins: ['627488'] },
-  { name: 'Parsian', title: 'بانک پارسیان', bins: ['622106'] },
-  { name: 'EN', title: 'بانک اقتصاد نوین', bins: ['627412'] },
-  { name: 'Saman', title: 'بانک سامان', bins: ['621986'] },
-  { name: 'Pasargad', title: 'بانک پاسارگاد', bins: ['502229'] },
-  { name: 'Sarmayeh', title: 'بانک سرمایه', bins: ['639607'] },
-  { name: 'Sina', title: 'بانک سینا', bins: ['639346'] },
-  { name: 'Mehr', title: 'بانک قرضالحسنه مهر ایران', bins: ['606373'] },
-  { name: 'Shahr', title: 'بانک شهر', bins: ['504706'] },
-  { name: 'Ayandeh', title: 'بانک آینده', bins: ['636214'] },
-  { name: 'Ansar', title: 'بانک انصار', bins: ['627381'] },
-  { name: 'Tourism', title: 'بانک گردشگری', bins: ['505416'] },
-  { name: 'Hekmat', title: 'بانک حکمت ایرانیان', bins: ['636949'] },
-  { name: 'Day', title: 'بانک دی', bins: ['502938'] },
-  { name: 'IranZamin', title: 'بانک ایران زمین', bins: ['505785'] },
-  { name: 'Resalat', title: 'بانک قرض الحسنه رسالت', bins: ['504172'] },
-  { name: 'MiddleEast', title: 'بانک خاورمیانه', bins: ['505809', '585947'] },
-  { name: 'Ghavamin', title: 'بانک قوامین', bins: ['639599'] },
-  { name: 'Kosar', title: 'موسسه مالی و اعتباری کوثر', bins: ['505801'] },
-  { name: 'Askariye', title: 'موسسه مالی واعتباری عسگریه', bins: ['606256'] },
-  { name: 'Venezuela', title: 'بانک ایران ونزوئلا', bins: ['581874'] },
-  { name: 'Noor', title: 'موسسه نور', bins: ['507677'] },
-  { name: 'Unknown Bank', title: 'بانک نامشخص', bins: [] }
+  { name: 'Melli', title: 'بانک ملی ایران', bins: ['603799'] }
 ];
 
+const persianLabels = {
+  title: 'تحلیل‌گر کارت بانکی',
+  analyze: 'تحلیل داده‌ها',
+  paste: 'چسباندن',
+  export: 'خروجی اکسل',
+  reset: 'پاک کردن',
+  cardNumber: 'شماره کارت',
+  bank: 'نام بانک',
+  totalAmount: 'مجموع مبلغ',
+  repetitions: 'تعداد تکرار',
+  daysCount: 'تعداد روزها',
+  dates: 'تاریخ‌ها',
+  searchPlaceholder: 'جستجوی شماره کارت...',
+  textareaPlaceholder: 'شماره کارت و مبلغ و تاریخ را وارد کنید (هر مورد در یک خط)',
+  analyzing: 'در حال تحلیل...',
+  processingData: 'در حال پردازش داده‌های شما...',
+  analysisComplete: 'تحلیل تکمیل شد!',
+  cardsAnalyzed: 'کارت‌های منحصر به فرد تحلیل شده',
+  great: 'عالی!',
+  copySuccess: 'اطلاعات با موفقیت کپی شد',
+  copyError: 'خطا در کپی کردن اطلاعات',
+  filterPlaceholder: 'فیلتر بر اساس مبلغ...',
+  noData: 'داده‌ای برای نمایش وجود ندارد',
+  print: 'پرینت',
+  share: 'اشتراک‌گذاری',
+  downloadPDF: 'دانلود PDF',
+  copyData: 'کپی اطلاعات',
+  refresh: 'بازنشانی فیلترها',
+  amountRange: 'محدوده مبلغ',
+  from: 'از',
+  to: 'تا',
+  totalTransactions: 'تعداد کل تراکنش‌ها',
+  totalAmount: 'مجموع کل مبالغ',
+  averageAmount: 'میانگین مبالغ'
+
+};
+
+const persianFontStyle = {
+  fontFamily: "'IRANSans', 'IRANSansWeb', 'Tahoma', sans-serif",
+  direction: 'rtl'
+};
+
 const BankCardAnalyzer = () => {
-  // State declarations
+  // All state declarations
   const [inputData, setInputData] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [transactions, setTransactions] = useState([]);
-  const [sortConfig, setSortConfig] = useState({
-    key: 'amount',
-    direction: 'desc'
-  });
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'cardNumber', direction: 'asc' });
+  const [amountFilter, setAmountFilter] = useState({ min: '', max: '' });
+  const [showStats, setShowStats] = useState(false);
+
+   // Format number with commas
+   const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+  
+   // Calculate statistics
+   const statistics = useMemo(() => {
+    if (!transactions.length) return null;
+    
+    const validAmounts = transactions
+      .filter(t => typeof t.totalAmount === 'number')
+      .map(t => t.totalAmount);
+    
+    return {
+      totalTransactions: transactions.reduce((sum, t) => sum + t.repetitionCount, 0),
+      totalAmount: validAmounts.reduce((sum, amount) => sum + amount, 0),
+      averageAmount: validAmounts.length ? 
+        validAmounts.reduce((sum, amount) => sum + amount, 0) / validAmounts.length : 0
+    };
+  }, [transactions]);
+
+ // Enhanced sorting and filtering
+ const filteredAndSortedTransactions = useMemo(() => {
+  let filtered = [...transactions];
+
+    // Apply amount filter
+    if (amountFilter.min || amountFilter.max) {
+      filtered = filtered.filter(t => {
+        if (typeof t.totalAmount !== 'number') return false;
+        const min = amountFilter.min ? parseFloat(amountFilter.min) : -Infinity;
+        const max = amountFilter.max ? parseFloat(amountFilter.max) : Infinity;
+        return t.totalAmount >= min && t.totalAmount <= max;
+      });
+    }
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(t => 
+        t.cardNumber.includes(searchTerm.replace(/\D/g, '')) ||
+        t.bank.title.includes(searchTerm)
+      );
+    }
+
+    // Apply sorting
+    return filtered.sort((a, b) => {
+      const modifier = sortConfig.direction === 'asc' ? 1 : -1;
+      
+      switch (sortConfig.key) {
+        case 'cardNumber':
+          return modifier * a.cardNumber.localeCompare(b.cardNumber);
+        case 'amount':
+          if (a.totalAmount === 'No price' && b.totalAmount === 'No price') return 0;
+          if (a.totalAmount === 'No price') return 1;
+          if (b.totalAmount === 'No price') return -1;
+          return modifier * (a.totalAmount - b.totalAmount);
+        case 'repetitions':
+          return modifier * (a.repetitionCount - b.repetitionCount);
+        case 'days':
+          return modifier * (a.daysCount - b.daysCount);
+        default:
+          return 0;
+      }
+    });
+  }, [transactions, sortConfig, searchTerm, amountFilter]);
+
+  // Copy formatted data
+  const copyFormattedData = async () => {
+    try {
+      const formattedData = filteredAndSortedTransactions.map(t => (
+        `شماره کارت: ${t.cardNumber}\n` +
+        `بانک: ${t.bank.title}\n` +
+        `مجموع مبلغ: ${typeof t.totalAmount === 'number' ? formatNumber(t.totalAmount) : t.totalAmount}\n` +
+        `تعداد تراکنش: ${t.repetitionCount}\n` +
+        `تعداد روزها: ${t.daysCount}\n` +
+        `تاریخ‌ها: ${t.uniqueDates.join(', ')}\n` +
+        '-------------------'
+      )).join('\n');
+
+      await navigator.clipboard.writeText(formattedData);
+      toast({
+        title: persianLabels.copySuccess,
+        duration: 2000,
+      });
+    } catch (err) {
+      toast({
+        title: persianLabels.copyError,
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  // Print function
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
+  // Reset filters
+  const resetFilters = () => {
+    setAmountFilter({ min: '', max: '' });
+    setSearchTerm('');
+    setSortConfig({ key: 'cardNumber', direction: 'asc' });
+  };
 
   // Utility functions
   const validateCardNumber = useCallback((cardNumber) => {
     const cleanNumber = cardNumber.replace(/\D/g, '');
-    if (cleanNumber.length < 12 || cleanNumber.length > 19) return false;
+    if (cleanNumber.length !== 16) return false;
 
     let sum = 0;
     let isEven = false;
@@ -95,50 +222,45 @@ const BankCardAnalyzer = () => {
     ) || BANK_DATABASE[BANK_DATABASE.length - 1];
   }, []);
 
-  const extractCardAndAmount = useCallback((line) => {
-    // Remove any special characters except digits, dots, and commas
-    const cleanLine = line.replace(/[^\d.,\s]/g, ' ').trim();
-    
-    // Split by any number of spaces
+  const extractCardAmountAndDate = useCallback((line) => {
+    const cleanLine = line.replace(/[^\d.,/\s]/g, ' ').trim();
     const parts = cleanLine.split(/\s+/).filter(part => part.length > 0);
     
-    if (parts.length === 0) return null;
+    if (parts.length < 2) return null;
     
     let cardNumber = null;
     let amount = null;
+    let date = null;
     
-    // Check each part to identify card number and amount
     parts.forEach(part => {
-      // If it looks like a card number (12-19 digits)
-      if (/^\d{12,19}$/.test(part)) {
+      if (/^\d{16}$/.test(part)) {
         cardNumber = part;
-      }
-      // If it looks like an amount (numbers with optional decimals)
-      else if (/^\d+([.,]\d+)?$/.test(part)) {
+      } else if (/^\d+([.,]\d+)?$/.test(part)) {
         amount = parseFloat(part.replace(',', '.'));
+      } else if (/^\d{4}\/\d{2}\/\d{2}$/.test(part)) {
+        date = part;
       }
     });
     
-    // Return result only if we found at least a card number
-    if (cardNumber) {
-      return {
-        cardNumber,
-        amount: amount || 'No price'
-      };
+    if (cardNumber && date) {
+      return { cardNumber, amount: amount || 'No price', date };
     }
-    
     return null;
   }, []);
 
   // Analysis function
-  const analyzeData = useCallback(() => {
+  const analyzeData = useCallback(async () => {
+    setIsAnalyzing(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
     const transactionMap = new Map();
 
     inputData.split('\n').forEach(line => {
-      const result = extractCardAndAmount(line);
+      const result = extractCardAmountAndDate(line);
       if (!result) return;
       
-      const { cardNumber, amount } = result;
+      const { cardNumber, amount, date } = result;
       
       if (!validateCardNumber(cardNumber)) return;
 
@@ -146,137 +268,186 @@ const BankCardAnalyzer = () => {
         transactionMap.set(cardNumber, {
           cardNumber,
           bank: identifyBank(cardNumber),
-          amounts: amount === 'No price' ? ['No price'] : [amount],
+          transactions: [{amount, date}],
+          uniqueDates: new Set([date]),
           repetitionCount: 1,
           totalAmount: amount === 'No price' ? 'No price' : amount
         });
       } else {
         const existing = transactionMap.get(cardNumber);
-        existing.amounts.push(amount);
+        existing.transactions.push({amount, date});
+        existing.uniqueDates.add(date);
         existing.repetitionCount += 1;
         if (amount !== 'No price') {
           existing.totalAmount = existing.totalAmount === 'No price' ? 
-            amount : 
-            existing.totalAmount + amount;
+            amount : existing.totalAmount + amount;
         }
       }
     });
 
-    setTransactions(Array.from(transactionMap.values()));
-  }, [inputData, identifyBank, validateCardNumber, extractCardAndAmount]);
-
-  // Sorting and filtering
-  const sortedTransactions = useMemo(() => {
-    const filtered = searchTerm
-      ? transactions.filter(t => t.cardNumber.includes(searchTerm.replace(/\D/g, '')))
-      : transactions;
-
-    return [...filtered].sort((a, b) => {
-      const modifier = sortConfig.direction === 'desc' ? -1 : 1;
-      
-      if (sortConfig.key === 'amount') {
-        if (a.totalAmount === 'No price' && b.totalAmount === 'No price') return 0;
-        if (a.totalAmount === 'No price') return 1;
-        if (b.totalAmount === 'No price') return -1;
-        return modifier * (a.totalAmount - b.totalAmount);
-      }
-      return modifier * (a.repetitionCount - b.repetitionCount);
-    });
-  }, [transactions, sortConfig, searchTerm]);
-
-  // Export function
-  const exportToExcel = () => {
-    const workbook = XLSX.utils.book_new();
-    
-    const data = sortedTransactions.map(t => ({
-      'Card Number': t.cardNumber,
-      'Bank': t.bank.title,
-      'Total Amount': typeof t.totalAmount === 'number' ? t.totalAmount.toLocaleString() : t.totalAmount,
-      'Repetitions': t.repetitionCount,
-      'Individual Amounts': t.amounts.join(', ')
+    const processedTransactions = Array.from(transactionMap.values()).map(t => ({
+      ...t,
+      daysCount: t.uniqueDates.size,
+      uniqueDates: Array.from(t.uniqueDates)
     }));
 
-    const sheet = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(workbook, sheet, "Analysis");
-    XLSX.writeFile(workbook, "bank_analysis.xlsx");
-  };
+    setTransactions(processedTransactions);
+    setIsAnalyzing(false);
+    setShowSuccessDialog(true);
+  }, [inputData, identifyBank, validateCardNumber, extractCardAmountAndDate]);
 
-  // UI handlers
+  // Handle paste
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       setInputData((prev) => `${prev}\n${text}`.trim());
     } catch (err) {
-      console.error('Failed to read clipboard:', err);
+      setErrorMessage('خطا در خواندن کلیپ‌بورد');
+      setShowErrorDialog(true);
     }
   };
 
+  // Handle reset
   const handleReset = () => {
     setInputData('');
     setTransactions([]);
     setSearchTerm('');
   };
 
+  // Handle sort
   const handleSort = (key) => {
-    setSortConfig(prev => ({
+    setSortConfig({
       key,
-      direction: 
-        prev.key === key 
-          ? prev.direction === 'desc' 
-            ? 'asc' 
-            : 'desc'
-          : 'desc'
-    }));
+      direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'
+    });
   };
 
-  // Sort indicator component
-  const SortIndicator = ({ currentKey, column }) => {
-    if (sortConfig.key !== column) return <ArrowUpDown className="w-4 h-4 opacity-50" />;
-    return sortConfig.direction === 'desc' 
-      ? <ArrowDown className="w-4 h-4" /> 
-      : <ArrowUp className="w-4 h-4" />;
+  // Enhanced sorting logic
+  const sortedTransactions = useMemo(() => {
+    const filtered = searchTerm
+      ? transactions.filter(t => t.cardNumber.includes(searchTerm.replace(/\D/g, '')))
+      : transactions;
+
+    return [...filtered].sort((a, b) => {
+      const modifier = sortConfig.direction === 'asc' ? 1 : -1;
+      
+      switch (sortConfig.key) {
+        case 'cardNumber':
+          return modifier * a.cardNumber.localeCompare(b.cardNumber);
+        case 'amount':
+          if (a.totalAmount === 'No price' && b.totalAmount === 'No price') return 0;
+          if (a.totalAmount === 'No price') return 1;
+          if (b.totalAmount === 'No price') return -1;
+          return modifier * (a.totalAmount - b.totalAmount);
+        case 'repetitions':
+          return modifier * (a.repetitionCount - b.repetitionCount);
+        case 'days':
+          return modifier * (a.daysCount - b.daysCount);
+        default:
+          return 0;
+      }
+    });
+  }, [transactions, sortConfig, searchTerm]);
+
+  // Export to Excel
+  const exportToExcel = () => {
+    const workbook = XLSX.utils.book_new();
+    
+    const data = sortedTransactions.map(t => ({
+      'شماره کارت': t.cardNumber,
+      'تعداد تراکنش‌ها': t.repetitionCount,
+      'تعداد روزهای فعالیت': t.daysCount,
+      'مجموع مبلغ': typeof t.totalAmount === 'number' ? t.totalAmount.toLocaleString() : t.totalAmount,
+      'نام بانک': t.bank.title
+    }));
+
+    const sheet = XLSX.utils.json_to_sheet(data);
+    
+    // Enhanced RTL support
+    sheet['!dir'] = 'rtl';
+    const range = XLSX.utils.decode_range(sheet['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell = sheet[XLSX.utils.encode_cell({r: R, c: C})];
+        if (!cell) continue;
+        if (!cell.s) cell.s = {};
+        cell.s.alignment = { 
+          horizontal: 'right', 
+          vertical: 'center',
+          wrapText: true,
+          textRotation: 0
+        };
+      }
+    }
+
+    const cols = [];
+    for (let i = 0; i <= range.e.c; ++i) {
+      cols.push({ wch: 20 });
+    }
+    sheet['!cols'] = cols;
+
+    XLSX.utils.book_append_sheet(workbook, sheet, "تحلیل");
+    XLSX.writeFile(workbook, "تحلیل_بانکی.xlsx");
   };
-   // Enhanced UI Components
-   const ActionButton = ({ onClick, icon: Icon, label, color }) => (
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white ${color} transition-all duration-200 shadow-lg hover:shadow-xl`}
-    >
-      <Icon className="w-5 h-5" />
-      <span>{label}</span>
-    </motion.button>
-  );
 
   return (
+    
     <div className={`min-h-screen flex items-center justify-center p-4 transition-colors ${
       isDarkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white' 
                 : 'bg-gradient-to-br from-blue-50 to-indigo-100'
-    }`}>
-      <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
-        <AlertDialogContent className={isDarkMode ? 'bg-gray-800 text-white' : 'bg-white'}>
+    }`} style={persianFontStyle}>
+      <AlertDialog open={isAnalyzing}>
+        <AlertDialogContent className="bg-gradient-to-br from-blue-500 to-purple-600 text-white" style={persianFontStyle}>
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 mx-auto mb-4"
+          >
+            <Calendar className="w-full h-full" />
+          </motion.div>
           <AlertDialogHeader>
-            <AlertDialogTitle>Analysis Error</AlertDialogTitle>
-            <AlertDialogDescription>{errorMessage}</AlertDialogDescription>
+            <AlertDialogTitle className="text-center">{persianLabels.analyzing}</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-200">
+              {persianLabels.processingData}
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>Understood</AlertDialogAction>
-          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent className="bg-gradient-to-br from-green-500 to-emerald-600 text-white" style={persianFontStyle}>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>{persianLabels.analysisComplete}</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-200">
+                {transactions.length} {persianLabels.cardsAnalyzed}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction className="bg-white text-green-600">
+                {persianLabels.great}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </motion.div>
         </AlertDialogContent>
       </AlertDialog>
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-4xl"
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-6xl"
       >
         <Card className={`shadow-2xl ${isDarkMode ? 'bg-gray-800 border-gray-700' : ''}`}>
           <CardHeader className={`${
             isDarkMode ? 'bg-gradient-to-r from-gray-700 to-gray-600' 
                       : 'bg-gradient-to-r from-blue-500 to-indigo-600'
           } text-white flex justify-between items-center`}>
-            <CardTitle>Enhanced Bank Card Analyzer</CardTitle>
+            <CardTitle>{persianLabels.title}</CardTitle>
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
               className="focus:outline-none"
@@ -286,18 +457,26 @@ const BankCardAnalyzer = () => {
           </CardHeader>
 
           <CardContent className="p-6 space-y-4">
-            <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
               <Button onClick={analyzeData} className="bg-green-500 hover:bg-green-600">
-                Analyze Data
+                {persianLabels.analyze}
               </Button>
-              <Button onClick={handlePaste} className="bg-teal-500 hover:bg-teal-600">
-                <ClipboardPaste className="mr-2" /> Paste
+              <Button onClick={handlePaste} className="bg-teal-500 hover:bg-teal-600"><ClipboardPaste className="ml-2" /> {persianLabels.paste}
               </Button>
               <Button onClick={exportToExcel} className="bg-amber-500 hover:bg-amber-600">
-                Export to Excel
+                {persianLabels.export}
               </Button>
               <Button onClick={handleReset} className="bg-red-500 hover:bg-red-600">
-                <Trash2 className="mr-2" /> Reset
+                <Trash2 className="ml-2" /> {persianLabels.reset}
+              </Button>
+              <Button onClick={copyFormattedData} className="bg-purple-500 hover:bg-purple-600">
+                <Copy className="ml-2" /> {persianLabels.copyData}
+              </Button>
+              <Button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600">
+                <Printer className="ml-2" /> {persianLabels.print}
+              </Button>
+              <Button onClick={resetFilters} className="bg-gray-500 hover:bg-gray-600">
+                <RefreshCcw className="ml-2" /> {persianLabels.refresh}
               </Button>
             </div>
 
@@ -306,61 +485,141 @@ const BankCardAnalyzer = () => {
                 isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
                           : 'border-blue-200 focus:ring-2 focus:ring-blue-500'
               }`}
-              placeholder="Enter card numbers and amounts (one per line, format: CARDNUMBER AMOUNT or AMOUNT CARDNUMBER)"
+              placeholder={persianLabels.textareaPlaceholder}
               value={inputData}
               onChange={(e) => setInputData(e.target.value)}
+              style={persianFontStyle}
             />
 
             <input 
               type="text"
-              placeholder="Search card numbers..."
+              placeholder={persianLabels.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={`w-full p-2 border rounded-lg ${
                 isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
                           : 'border-blue-200 focus:ring-2 focus:ring-blue-500'
               }`}
+              style={persianFontStyle}
             />
+{/* Filter Section */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm">{persianLabels.amountRange}</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder={persianLabels.from}
+                    value={amountFilter.min}
+                    onChange={(e) => setAmountFilter(prev => ({ ...prev, min: e.target.value }))}
+                    className={`w-full p-2 border rounded-lg ${
+                      isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'border-blue-200'
+                    }`}
+                  />
+                  <input
+                    type="number"
+                    placeholder={persianLabels.to}
+                    value={amountFilter.max}
+                    onChange={(e) => setAmountFilter(prev => ({ ...prev, max: e.target.value }))}
+                    className={`w-full p-2 border rounded-lg ${
+                      isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'border-blue-200'
+                    }`}
+                  />
+                </div>
+              </div>
 
+              {/* ... Previous search input ... */}
+            </div>
+
+            {/* Statistics Section */}
+            {statistics && (
+              <div className={`p-4 rounded-lg ${
+                isDarkMode ? 'bg-gray-700' : 'bg-white'
+              } grid grid-cols-1 md:grid-cols-3 gap-4`}>
+                <div className="text-center">
+                  <div className="text-sm text-gray-500">{persianLabels.totalTransactions}</div>
+                  <div className="text-xl font-bold">{formatNumber(statistics.totalTransactions)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-500">{persianLabels.totalAmount}</div>
+                  <div className="text-xl font-bold">{formatNumber(statistics.totalAmount)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-500">{persianLabels.averageAmount}</div>
+                  <div className="text-xl font-bold">{formatNumber(Math.round(statistics.averageAmount))}</div>
+                </div>
+              </div>
+            )}
             {transactions.length > 0 && (
               <div className={`mt-4 p-4 rounded-lg ${
                 isDarkMode ? 'bg-gray-700' : 'bg-white shadow-md'
               }`}>
-                <h2 className="text-lg font-semibold mb-3">Analysis Results</h2>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" style={persianFontStyle}>
                   <table className="w-full">
                     <thead>
                       <tr>
-                        <th className="p-2 text-left">Card Number</th>
-                        <th className="p-2 text-left">Bank</th>
-                        <th className="p-2 text-right cursor-pointer group" onClick={() => handleSort('amount')}>
-                          <div className="flex items-center justify-end gap-2">
-                            Total Amount
-                            <SortIndicator currentKey={sortConfig.key} column="amount" />
-                          </div>
+                        <th className="p-2 text-right">
+                          <button 
+                            onClick={() => handleSort('cardNumber')}
+                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500"
+                          >
+                            {persianLabels.cardNumber}
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
                         </th>
-                        <th className="p-2 text-center cursor-pointer group" onClick={() => handleSort('repetitionCount')}>
-                          <div className="flex items-center justify-center gap-2">
-                            Repetitions
-                            <SortIndicator currentKey={sortConfig.key} column="repetitionCount" />
-                          </div>
+                        <th className="p-2 text-right">{persianLabels.bank}</th>
+                        <th className="p-2 text-left">
+                          <button 
+                            onClick={() => handleSort('amount')}
+                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500"
+                          >
+                            {persianLabels.totalAmount}
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
                         </th>
+                        <th className="p-2 text-center">
+                          <button 
+                            onClick={() => handleSort('repetitions')}
+                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500"
+                          >
+                            {persianLabels.repetitions}
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
+                        </th>
+                        <th className="p-2 text-center">
+                          <button 
+                            onClick={() => handleSort('days')}
+                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500"
+                          >
+                            {persianLabels.daysCount}
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
+                        </th>
+                        <th className="p-2 text-right">{persianLabels.dates}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sortedTransactions.map((t, index) => (
-                        <tr key={index} className={`border-b ${
-                          isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'
-                        } transition-colors`}>
-                          <td className="p-2">{t.cardNumber}</td>
-                          <td className="p-2">{t.bank.title}</td>
-                          <td className="p-2 text-right">
+                        <motion.tr 
+                          key={index}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className={`border-b ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'}`}
+                        >
+                          <td className="p-2 text-right">{t.cardNumber}</td>
+                          <td className="p-2 text-right">{t.bank.title}</td>
+                          <td className="p-2 text-left">
                             {typeof t.totalAmount === 'number' ? 
                               t.totalAmount.toLocaleString() : 
                               t.totalAmount}
                           </td>
                           <td className="p-2 text-center">{t.repetitionCount}</td>
-                        </tr>
+                          <td className="p-2 text-center">{t.daysCount}</td>
+                          <td className="p-2 text-right" dir="ltr">{t.uniqueDates.join(', ')}</td>
+                        </motion.tr>
                       ))}
                     </tbody>
                   </table>
@@ -371,10 +630,10 @@ const BankCardAnalyzer = () => {
           <CardFooter className={`px-6 py-3 text-sm ${
             isDarkMode ? 'text-gray-400 border-t border-gray-700' 
                       : 'text-gray-600 border-t'
-          }`}>
+          }`} style={persianFontStyle}>
             <div className="w-full flex justify-between items-center">
-              <span>Crafted by Mehrshad</span>
-              <span>All rights reserved Capt.Esmaeili</span>
+              <span>توسعه داده شده توسط مهرشاد</span>
+              <span>تمامی حقوق محفوظ است</span>
             </div>
           </CardFooter>
         </Card>
