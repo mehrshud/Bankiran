@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
-
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { 
@@ -24,6 +23,7 @@ import {
 
 
 // Bank database constant with Persian titles
+// Bank database constant
 const BANK_DATABASE = [
   { name: 'Markazi', title: 'اداره معاملات ریالی بانک مرکزی', bins: ['636795'] },
   { name: 'Sanat', title: 'بانک صنعت و معدن', bins: ['627961'] },
@@ -32,9 +32,37 @@ const BANK_DATABASE = [
   { name: 'Maskan', title: 'بانک مسکن', bins: ['628023'] },
   { name: 'Sepah', title: 'بانک سپه', bins: ['589210'] },
   { name: 'Keshavarzi', title: 'بانک کشاورزی', bins: ['603770'] },
-  { name: 'Melli', title: 'بانک ملی ایران', bins: ['603799'] }
+  { name: 'Melli', title: 'بانک ملی ایران', bins: ['603799'] },
+  { name: 'Tejarat', title: 'بانک تجارت', bins: ['627353', '585983'] },
+  { name: 'Saderat', title: 'بانک صادرات ایران', bins: ['603769'] },
+  { name: 'ToseeSaderat', title: 'بانک توسعه صادرات ایران', bins: ['627648'] },
+  { name: 'Post', title: 'پست بانک', bins: ['627760'] },
+  { name: 'Taavon', title: 'بانک توسعه تعاون', bins: ['502908'] },
+  { name: 'Tosee', title: 'موسسه اعتباری توسعه', bins: ['628157'] },
+  { name: 'Karafarin', title: 'بانک کارآفرین', bins: ['627488'] },
+  { name: 'Parsian', title: 'بانک پارسیان', bins: ['622106'] },
+  { name: 'EN', title: 'بانک اقتصاد نوین', bins: ['627412'] },
+  { name: 'Saman', title: 'بانک سامان', bins: ['621986'] },
+  { name: 'Pasargad', title: 'بانک پاسارگاد', bins: ['502229'] },
+  { name: 'Sarmayeh', title: 'بانک سرمایه', bins: ['639607'] },
+  { name: 'Sina', title: 'بانک سینا', bins: ['639346'] },
+  { name: 'Mehr', title: 'بانک قرضالحسنه مهر ایران', bins: ['606373'] },
+  { name: 'Shahr', title: 'بانک شهر', bins: ['504706'] },
+  { name: 'Ayandeh', title: 'بانک آینده', bins: ['636214'] },
+  { name: 'Ansar', title: 'بانک انصار', bins: ['627381'] },
+  { name: 'Tourism', title: 'بانک گردشگری', bins: ['505416'] },
+  { name: 'Hekmat', title: 'بانک حکمت ایرانیان', bins: ['636949'] },
+  { name: 'Day', title: 'بانک دی', bins: ['502938'] },
+  { name: 'IranZamin', title: 'بانک ایران زمین', bins: ['505785'] },
+  { name: 'Resalat', title: 'بانک قرض الحسنه رسالت', bins: ['504172'] },
+  { name: 'MiddleEast', title: 'بانک خاورمیانه', bins: ['505809', '585947'] },
+  { name: 'Ghavamin', title: 'بانک قوامین', bins: ['639599'] },
+  { name: 'Kosar', title: 'موسسه مالی و اعتباری کوثر', bins: ['505801'] },
+  { name: 'Askariye', title: 'موسسه مالی واعتباری عسگریه', bins: ['606256'] },
+  { name: 'Venezuela', title: 'بانک ایران ونزوئلا', bins: ['581874'] },
+  { name: 'Noor', title: 'موسسه نور', bins: ['507677'] },
+  { name: 'Unknown Bank', title: 'بانک نامشخص', bins: [] }
 ];
-
 const persianLabels = {
   title: 'تحلیل‌گر کارت بانکی',
   analyze: 'تحلیل داده‌ها',
