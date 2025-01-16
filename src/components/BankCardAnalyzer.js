@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Filter, BarChart2, X } from 'lucide-react';
 import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ToastContainer, toast } from 'react-toastify';
@@ -108,7 +109,43 @@ const persianFontStyle = {
 const BankCardAnalyzer = () => {
   // All state declarations
   const [inputData, setInputData] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+  const toggleTheme = () => {
+    setIsDarkMode(prev => !prev);
+    document.documentElement.classList.toggle('dark');
+  };
+  const QuickActionsMenu = () => (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="fixed bottom-4 right-4 flex gap-2"
+    >
+      <Button
+        onClick={analyzeData}
+        className="rounded-full w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600"
+      >
+        <BarChart2 className="w-6 h-6" />
+      </Button>
+      <Button
+        onClick={handlePaste}
+        className="rounded-full w-12 h-12 bg-gradient-to-r from-green-500 to-green-600"
+      >
+        <ClipboardPaste className="w-6 h-6" />
+      </Button>
+      <Button
+        onClick={toggleTheme}
+        className="rounded-full w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600"
+      >
+        {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+      </Button>
+    </motion.div>
+  );
+  
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,6 +155,19 @@ const BankCardAnalyzer = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'cardNumber', direction: 'asc' });
   const [amountFilter, setAmountFilter] = useState({ min: '', max: '' });
   const [showStats, setShowStats] = useState(false);
+
+const [searchFilters, setSearchFilters] = useState({
+  cardNumber: '',
+  bankName: '',
+  dateRange: { start: '', end: '' },
+  amountRange: { min: '', max: '' },
+  transactionCount: { min: '', max: '' }
+});
+const [showFilters, setShowFilters] = useState(false);
+const [activeTab, setActiveTab] = useState('table');
+const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+const [hoveredRow, setHoveredRow] = useState(null);
+const [selectedCards, setSelectedCards] = useState(new Set());
 
    // Format number with commas
    const formatNumber = (num) => {
@@ -254,7 +304,16 @@ const BankCardAnalyzer = () => {
     const cleanLine = line.replace(/[^\d.,/\s]/g, ' ').trim();
     const parts = cleanLine.split(/\s+/).filter(part => part.length > 0);
     
-    if (parts.length < 2) return null;
+    if (parts.length === 0) return null;
+    
+    // If only card number is present
+    if (parts.length === 1 && /^\d{16}$/.test(parts[0])) {
+      return {
+        cardNumber: parts[0],
+        amount: 0,
+        date: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+      };
+    }
     
     let cardNumber = null;
     let amount = null;
@@ -270,8 +329,12 @@ const BankCardAnalyzer = () => {
       }
     });
     
-    if (cardNumber && date) {
-      return { cardNumber, amount: amount || 'No price', date };
+    if (cardNumber) {
+      return {
+        cardNumber,
+        amount: amount || 0,
+        date: date || new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+      };
     }
     return null;
   }, []);
@@ -378,46 +441,146 @@ const BankCardAnalyzer = () => {
   }, [transactions, sortConfig, searchTerm]);
 
   // Export to Excel
-  const exportToExcel = () => {
+ const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
     
-    const data = sortedTransactions.map(t => ({
+    const data = sortedTransactions.map((t, index) => ({
+      'ردیف': index + 1,
       'شماره کارت': t.cardNumber,
       'تعداد تراکنش‌ها': t.repetitionCount,
       'تعداد روزهای فعالیت': t.daysCount,
-      'مجموع مبلغ': typeof t.totalAmount === 'number' ? t.totalAmount.toLocaleString() : t.totalAmount,
-      'نام بانک': t.bank.title
+      'مجموع مبلغ': typeof t.totalAmount === 'number' ? t.totalAmount : 0,
     }));
 
-    const sheet = XLSX.utils.json_to_sheet(data);
+    const sheet = XLSX.utils.json_to_sheet(data, {
+      header: ['ردیف', 'شماره کارت', 'تعداد تراکنش‌ها', 'تعداد روزهای فعالیت', 'مجموع مبلغ']
+    });
     
-    // Enhanced RTL support
-    sheet['!dir'] = 'rtl';
+    // Set column widths
+    const colWidths = [
+      { wch: 8 },  // ردیف
+      { wch: 20 }, // شماره کارت
+      { wch: 15 }, // تعداد تراکنش‌ها
+      { wch: 20 }, // تعداد روزهای فعالیت
+      { wch: 15 }, // مجموع مبلغ
+    ];
+    sheet['!cols'] = colWidths;
+
+    // Center align all cells
     const range = XLSX.utils.decode_range(sheet['!ref']);
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cell = sheet[XLSX.utils.encode_cell({r: R, c: C})];
-        if (!cell) continue;
-        if (!cell.s) cell.s = {};
-        cell.s.alignment = { 
-          horizontal: 'right', 
-          vertical: 'center',
-          wrapText: true,
-          textRotation: 0
+        const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!sheet[cellRef]) continue;
+        if (!sheet[cellRef].s) sheet[cellRef].s = {};
+        sheet[cellRef].s = {
+          alignment: {
+            horizontal: 'center',
+            vertical: 'center'
+          },
+          font: {
+            name: 'B Nazanin',
+            sz: 11
+          }
         };
       }
     }
 
-    const cols = [];
-    for (let i = 0; i <= range.e.c; ++i) {
-      cols.push({ wch: 20 });
-    }
-    sheet['!cols'] = cols;
-
-    XLSX.utils.book_append_sheet(workbook, sheet, "تحلیل");
-    XLSX.writeFile(workbook, "تحلیل_بانکی.xlsx");
+    // Set RTL
+    sheet['!dir'] = 'rtl';
+    
+    XLSX.utils.book_append_sheet(workbook, sheet, "Analysis");
+    XLSX.writeFile(workbook, "bank_analysis.xlsx");
   };
-
+  const SearchBar = () => (
+    <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+      className="relative"
+    >
+      <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg p-2 shadow-lg">
+        <Search className="w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="جستجوی پیشرفته..."
+          className="w-full bg-transparent border-none focus:ring-0"
+          onChange={(e) => setSearchFilters(prev => ({ ...prev, cardNumber: e.target.value }))}
+          onFocus={() => setShowSearchSuggestions(true)}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowFilters(prev => !prev)}
+          className="hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          <Filter className="w-4 h-4" />
+        </Button>
+      </div>
+  
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="absolute w-full mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10"
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">نام بانک</label>
+                <input
+                  type="text"
+                  className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700"
+                  onChange={(e) => setSearchFilters(prev => ({ ...prev, bankName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">محدوده تاریخ</label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700"
+                    onChange={(e) => setSearchFilters(prev => ({
+                      ...prev,
+                      dateRange: { ...prev.dateRange, start: e.target.value }
+                    }))}
+                  />
+                  <input
+                    type="date"
+                    className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700"
+                    onChange={(e) => setSearchFilters(prev => ({
+                      ...prev,
+                      dateRange: { ...prev.dateRange, end: e.target.value }
+                    }))}
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(transaction => {
+      const matchesCardNumber = transaction.cardNumber.includes(searchFilters.cardNumber);
+      const matchesBankName = transaction.bank.title.toLowerCase().includes(searchFilters.bankName.toLowerCase());
+      
+      const amount = typeof transaction.totalAmount === 'number' ? transaction.totalAmount : 0;
+      const matchesAmount = (!searchFilters.amountRange.min || amount >= parseFloat(searchFilters.amountRange.min)) &&
+                          (!searchFilters.amountRange.max || amount <= parseFloat(searchFilters.amountRange.max));
+      
+      const matchesTransactionCount = (!searchFilters.transactionCount.min || transaction.repetitionCount >= parseInt(searchFilters.transactionCount.min)) &&
+                                    (!searchFilters.transactionCount.max || transaction.repetitionCount <= parseInt(searchFilters.transactionCount.max));
+      
+      const matchesDateRange = (!searchFilters.dateRange.start || !searchFilters.dateRange.end) ||
+                              transaction.uniqueDates.some(date => {
+                                return date >= searchFilters.dateRange.start && date <= searchFilters.dateRange.end;
+                              });
+      
+      return matchesCardNumber && matchesBankName && matchesAmount && matchesTransactionCount && matchesDateRange;
+    });
+  }, [transactions, searchFilters]);
   return (
     
     <div className={`min-h-screen flex items-center justify-center p-4 transition-colors ${
@@ -649,6 +812,46 @@ const BankCardAnalyzer = () => {
                           <td className="p-2 text-right" dir="ltr">{t.uniqueDates.join(', ')}</td>
                         </motion.tr>
                       ))}
+                      {filteredTransactions.map((t, index) => (
+  <motion.tr
+  key={index}
+  initial={{ opacity: 0, x: -20 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ delay: index * 0.05 }}
+  className={`
+    relative transition-all duration-200
+    ${hoveredRow === t.cardNumber ? 'bg-blue-50 dark:bg-gray-700' : ''}
+    ${selectedCards.has(t.cardNumber) ? 'bg-blue-100 dark:bg-gray-600' : ''}
+  `}
+  onMouseEnter={() => setHoveredRow(t.cardNumber)}
+  onMouseLeave={() => setHoveredRow(null)}
+  onClick={() => {
+    setSelectedCards((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(t.cardNumber)) {
+        newSet.delete(t.cardNumber);
+      } else {
+        newSet.add(t.cardNumber);
+      }
+      return newSet;
+    });
+  }}
+>
+  <td className="p-4 border border-gray-200 dark:border-gray-700">
+    {t.cardNumber}
+  </td>
+  <td className="p-4 border border-gray-200 dark:border-gray-700">
+    {t.cardHolder}
+  </td>
+  <td className="p-4 border border-gray-200 dark:border-gray-700">
+    {t.expirationDate}
+  </td>
+  <td className="p-4 border border-gray-200 dark:border-gray-700">
+    {t.status}
+  </td>
+</motion.tr>
+
+))}
                     </tbody>
                   </table>
                 </div>
