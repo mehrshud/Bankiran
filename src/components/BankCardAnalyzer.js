@@ -7,23 +7,17 @@ import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, Calendar } from 'lucide
 import * as XLSX from 'xlsx';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { 
-  AlertDialog, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogAction 
+  AlertDialogAction
 } from '@/components/ui/alert-dialog';
-import { 
-  Copy,
-  Printer,
-  RefreshCcw
-} from 'lucide-react';
+import { Copy, Printer, RefreshCcw } from 'lucide-react';
 
-
-// Bank database constant with Persian titles
 // Bank database constant
 const BANK_DATABASE = [
   { name: 'Markazi', title: 'اداره معاملات ریالی بانک مرکزی', bins: ['636795'] },
@@ -64,6 +58,7 @@ const BANK_DATABASE = [
   { name: 'Noor', title: 'موسسه نور', bins: ['507677'] },
   { name: 'Unknown Bank', title: 'بانک نامشخص', bins: [] }
 ];
+
 const persianLabels = {
   title: 'تحلیل‌گر کارت بانکی',
   analyze: 'تحلیل داده‌ها',
@@ -98,7 +93,6 @@ const persianLabels = {
   totalTransactions: 'تعداد کل تراکنش‌ها',
   totalAmount: 'مجموع کل مبالغ',
   averageAmount: 'میانگین مبالغ'
-
 };
 
 const persianFontStyle = {
@@ -107,7 +101,6 @@ const persianFontStyle = {
 };
 
 const BankCardAnalyzer = () => {
-  // All state declarations
   const [inputData, setInputData] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -116,36 +109,37 @@ const BankCardAnalyzer = () => {
     return false;
   });
   const toggleTheme = () => {
-    setIsDarkMode(prev => !prev);
+    setIsDarkMode((prev) => !prev);
     document.documentElement.classList.toggle('dark');
   };
   const QuickActionsMenu = () => (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="fixed bottom-4 right-4 flex gap-2"
+      transition={{ duration: 0.3 }}
+      className="fixed bottom-6 right-6 flex gap-3"
     >
       <Button
         onClick={analyzeData}
-        className="rounded-full w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600"
+        className="rounded-full w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 hover:scale-105 transition-transform"
       >
         <BarChart2 className="w-6 h-6" />
       </Button>
       <Button
         onClick={handlePaste}
-        className="rounded-full w-12 h-12 bg-gradient-to-r from-green-500 to-green-600"
+        className="rounded-full w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:scale-105 transition-transform"
       >
         <ClipboardPaste className="w-6 h-6" />
       </Button>
       <Button
         onClick={toggleTheme}
-        className="rounded-full w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600"
+        className="rounded-full w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 hover:scale-105 transition-transform"
       >
         {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
       </Button>
     </motion.div>
   );
-  
+
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -154,68 +148,52 @@ const BankCardAnalyzer = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'cardNumber', direction: 'asc' });
   const [amountFilter, setAmountFilter] = useState({ min: '', max: '' });
-  const [showStats, setShowStats] = useState(false);
+  const [searchFilters, setSearchFilters] = useState({
+    cardNumber: '',
+    bankName: '',
+    dateRange: { start: '', end: '' },
+    amountRange: { min: '', max: '' },
+    transactionCount: { min: '', max: '' }
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('table');
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [selectedCards, setSelectedCards] = useState(new Set());
 
-const [searchFilters, setSearchFilters] = useState({
-  cardNumber: '',
-  bankName: '',
-  dateRange: { start: '', end: '' },
-  amountRange: { min: '', max: '' },
-  transactionCount: { min: '', max: '' }
-});
-const [showFilters, setShowFilters] = useState(false);
-const [activeTab, setActiveTab] = useState('table');
-const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
-const [hoveredRow, setHoveredRow] = useState(null);
-const [selectedCards, setSelectedCards] = useState(new Set());
-
-   // Format number with commas
-   const formatNumber = (num) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
-  
-   // Calculate statistics
-   const statistics = useMemo(() => {
+
+  const statistics = useMemo(() => {
     if (!transactions.length) return null;
-    
-    const validAmounts = transactions
-      .filter(t => typeof t.totalAmount === 'number')
-      .map(t => t.totalAmount);
-    
+    const validAmounts = transactions.filter((t) => typeof t.totalAmount === 'number').map((t) => t.totalAmount);
     return {
       totalTransactions: transactions.reduce((sum, t) => sum + t.repetitionCount, 0),
       totalAmount: validAmounts.reduce((sum, amount) => sum + amount, 0),
-      averageAmount: validAmounts.length ? 
-        validAmounts.reduce((sum, amount) => sum + amount, 0) / validAmounts.length : 0
+      averageAmount: validAmounts.length
+        ? validAmounts.reduce((sum, amount) => sum + amount, 0) / validAmounts.length
+        : 0
     };
   }, [transactions]);
 
- // Enhanced sorting and filtering
- const filteredAndSortedTransactions = useMemo(() => {
-  let filtered = [...transactions];
-
-    // Apply amount filter
+  const filteredAndSortedTransactions = useMemo(() => {
+    let filtered = [...transactions];
     if (amountFilter.min || amountFilter.max) {
-      filtered = filtered.filter(t => {
+      filtered = filtered.filter((t) => {
         if (typeof t.totalAmount !== 'number') return false;
         const min = amountFilter.min ? parseFloat(amountFilter.min) : -Infinity;
         const max = amountFilter.max ? parseFloat(amountFilter.max) : Infinity;
         return t.totalAmount >= min && t.totalAmount <= max;
       });
     }
-
-    // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(t => 
-        t.cardNumber.includes(searchTerm.replace(/\D/g, '')) ||
-        t.bank.title.includes(searchTerm)
+      filtered = filtered.filter(
+        (t) => t.cardNumber.includes(searchTerm.replace(/\D/g, '')) || t.bank.title.includes(searchTerm)
       );
     }
-
-    // Apply sorting
     return filtered.sort((a, b) => {
       const modifier = sortConfig.direction === 'asc' ? 1 : -1;
-      
       switch (sortConfig.key) {
         case 'cardNumber':
           return modifier * a.cardNumber.localeCompare(b.cardNumber);
@@ -234,53 +212,51 @@ const [selectedCards, setSelectedCards] = useState(new Set());
     });
   }, [transactions, sortConfig, searchTerm, amountFilter]);
 
-  // Copy formatted data
   const copyFormattedData = async () => {
     try {
-      const formattedData = filteredAndSortedTransactions.map(t => (
-        `شماره کارت: ${t.cardNumber}\n` +
-        `بانک: ${t.bank.title}\n` +
-        `مجموع مبلغ: ${typeof t.totalAmount === 'number' ? formatNumber(t.totalAmount) : t.totalAmount}\n` +
-        `تعداد تراکنش: ${t.repetitionCount}\n` +
-        `تعداد روزها: ${t.daysCount}\n` +
-        `تاریخ‌ها: ${t.uniqueDates.join(', ')}\n` +
-        '-------------------'
-      )).join('\n');
-
+      const formattedData = filteredAndSortedTransactions
+        .map(
+          (t) =>
+            `شماره کارت: ${t.cardNumber}\n` +
+            `بانک: ${t.bank.title}\n` +
+            `مجموع مبلغ: ${
+              typeof t.totalAmount === 'number' ? formatNumber(t.totalAmount) : t.totalAmount
+            }\n` +
+            `تعداد تراکنش: ${t.repetitionCount}\n` +
+            `تعداد روزها: ${t.daysCount}\n` +
+            `تاریخ‌ها: ${t.uniqueDates.join(', ')}\n` +
+            '-------------------'
+        )
+        .join('\n');
       await navigator.clipboard.writeText(formattedData);
       toast({
         title: persianLabels.copySuccess,
-        duration: 2000,
+        duration: 2000
       });
     } catch (err) {
       toast({
         title: persianLabels.copyError,
-        variant: "destructive",
-        duration: 2000,
+        variant: 'destructive',
+        duration: 2000
       });
     }
   };
 
-  // Print function
   const handlePrint = useCallback(() => {
     window.print();
   }, []);
 
-  // Reset filters
   const resetFilters = () => {
     setAmountFilter({ min: '', max: '' });
     setSearchTerm('');
     setSortConfig({ key: 'cardNumber', direction: 'asc' });
   };
 
-  // Utility functions
   const validateCardNumber = useCallback((cardNumber) => {
     const cleanNumber = cardNumber.replace(/\D/g, '');
     if (cleanNumber.length !== 16) return false;
-
     let sum = 0;
     let isEven = false;
-
     for (let i = cleanNumber.length - 1; i >= 0; i--) {
       let digit = parseInt(cleanNumber.charAt(i), 10);
       if (isEven) {
@@ -295,18 +271,16 @@ const [selectedCards, setSelectedCards] = useState(new Set());
 
   const identifyBank = useCallback((cardNumber) => {
     const bin = cardNumber.slice(0, 6);
-    return BANK_DATABASE.find(bank => 
-      bank.bins.some(bankBin => bin.startsWith(bankBin))
-    ) || BANK_DATABASE[BANK_DATABASE.length - 1];
+    return (
+      BANK_DATABASE.find((bank) => bank.bins.some((bankBin) => bin.startsWith(bankBin))) ||
+      BANK_DATABASE[BANK_DATABASE.length - 1]
+    );
   }, []);
 
   const extractCardAmountAndDate = useCallback((line) => {
     const cleanLine = line.replace(/[^\d.,/\s]/g, ' ').trim();
-    const parts = cleanLine.split(/\s+/).filter(part => part.length > 0);
-    
+    const parts = cleanLine.split(/\s+/).filter((part) => part.length > 0);
     if (parts.length === 0) return null;
-    
-    // If only card number is present
     if (parts.length === 1 && /^\d{16}$/.test(parts[0])) {
       return {
         cardNumber: parts[0],
@@ -314,12 +288,10 @@ const [selectedCards, setSelectedCards] = useState(new Set());
         date: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
       };
     }
-    
     let cardNumber = null;
     let amount = null;
     let date = null;
-    
-    parts.forEach(part => {
+    parts.forEach((part) => {
       if (/^\d{16}$/.test(part)) {
         cardNumber = part;
       } else if (/^\d+([.,]\d+)?$/.test(part)) {
@@ -328,7 +300,6 @@ const [selectedCards, setSelectedCards] = useState(new Set());
         date = part;
       }
     });
-    
     if (cardNumber) {
       return {
         cardNumber,
@@ -339,55 +310,45 @@ const [selectedCards, setSelectedCards] = useState(new Set());
     return null;
   }, []);
 
-  // Analysis function
   const analyzeData = useCallback(async () => {
     setIsAnalyzing(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     const transactionMap = new Map();
-
-    inputData.split('\n').forEach(line => {
+    inputData.split('\n').forEach((line) => {
       const result = extractCardAmountAndDate(line);
       if (!result) return;
-      
       const { cardNumber, amount, date } = result;
-      
       if (!validateCardNumber(cardNumber)) return;
-
       if (!transactionMap.has(cardNumber)) {
         transactionMap.set(cardNumber, {
           cardNumber,
           bank: identifyBank(cardNumber),
-          transactions: [{amount, date}],
+          transactions: [{ amount, date }],
           uniqueDates: new Set([date]),
           repetitionCount: 1,
           totalAmount: amount === 'No price' ? 'No price' : amount
         });
       } else {
         const existing = transactionMap.get(cardNumber);
-        existing.transactions.push({amount, date});
+        existing.transactions.push({ amount, date });
         existing.uniqueDates.add(date);
         existing.repetitionCount += 1;
         if (amount !== 'No price') {
-          existing.totalAmount = existing.totalAmount === 'No price' ? 
-            amount : existing.totalAmount + amount;
+          existing.totalAmount =
+            existing.totalAmount === 'No price' ? amount : existing.totalAmount + amount;
         }
       }
     });
-
-    const processedTransactions = Array.from(transactionMap.values()).map(t => ({
+    const processedTransactions = Array.from(transactionMap.values()).map((t) => ({
       ...t,
       daysCount: t.uniqueDates.size,
       uniqueDates: Array.from(t.uniqueDates)
     }));
-
     setTransactions(processedTransactions);
     setIsAnalyzing(false);
     setShowSuccessDialog(true);
   }, [inputData, identifyBank, validateCardNumber, extractCardAmountAndDate]);
 
-  // Handle paste
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -398,14 +359,12 @@ const [selectedCards, setSelectedCards] = useState(new Set());
     }
   };
 
-  // Handle reset
   const handleReset = () => {
     setInputData('');
     setTransactions([]);
     setSearchTerm('');
   };
 
-  // Handle sort
   const handleSort = (key) => {
     setSortConfig({
       key,
@@ -413,15 +372,12 @@ const [selectedCards, setSelectedCards] = useState(new Set());
     });
   };
 
-  // Enhanced sorting logic
   const sortedTransactions = useMemo(() => {
     const filtered = searchTerm
-      ? transactions.filter(t => t.cardNumber.includes(searchTerm.replace(/\D/g, '')))
+      ? transactions.filter((t) => t.cardNumber.includes(searchTerm.replace(/\D/g, '')))
       : transactions;
-
     return [...filtered].sort((a, b) => {
       const modifier = sortConfig.direction === 'asc' ? 1 : -1;
-      
       switch (sortConfig.key) {
         case 'cardNumber':
           return modifier * a.cardNumber.localeCompare(b.cardNumber);
@@ -440,33 +396,20 @@ const [selectedCards, setSelectedCards] = useState(new Set());
     });
   }, [transactions, sortConfig, searchTerm]);
 
-  // Export to Excel
- const exportToExcel = () => {
+  const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
-    
     const data = sortedTransactions.map((t, index) => ({
-      'ردیف': index + 1,
+      ردیف: index + 1,
       'شماره کارت': t.cardNumber,
       'تعداد تراکنش‌ها': t.repetitionCount,
       'تعداد روزهای فعالیت': t.daysCount,
-      'مجموع مبلغ': typeof t.totalAmount === 'number' ? t.totalAmount : 0,
+      'مجموع مبلغ': typeof t.totalAmount === 'number' ? t.totalAmount : 0
     }));
-
     const sheet = XLSX.utils.json_to_sheet(data, {
       header: ['ردیف', 'شماره کارت', 'تعداد تراکنش‌ها', 'تعداد روزهای فعالیت', 'مجموع مبلغ']
     });
-    
-    // Set column widths
-    const colWidths = [
-      { wch: 8 },  // ردیف
-      { wch: 20 }, // شماره کارت
-      { wch: 15 }, // تعداد تراکنش‌ها
-      { wch: 20 }, // تعداد روزهای فعالیت
-      { wch: 15 }, // مجموع مبلغ
-    ];
+    const colWidths = [{ wch: 8 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
     sheet['!cols'] = colWidths;
-
-    // Center align all cells
     const range = XLSX.utils.decode_range(sheet['!ref']);
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
@@ -485,73 +428,81 @@ const [selectedCards, setSelectedCards] = useState(new Set());
         };
       }
     }
-
-    // Set RTL
     sheet['!dir'] = 'rtl';
-    
-    XLSX.utils.book_append_sheet(workbook, sheet, "Analysis");
-    XLSX.writeFile(workbook, "bank_analysis.xlsx");
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Analysis');
+    XLSX.writeFile(workbook, 'bank_analysis.xlsx');
   };
+
   const SearchBar = () => (
-    <motion.div 
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-      className="relative"
-    >
-      <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg p-2 shadow-lg">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative">
+      <div
+        className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 rounded-xl p-3 shadow-md 
+                   hover:shadow-xl transition-shadow"
+      >
         <Search className="w-5 h-5 text-gray-400" />
         <input
           type="text"
           placeholder="جستجوی پیشرفته..."
-          className="w-full bg-transparent border-none focus:ring-0"
-          onChange={(e) => setSearchFilters(prev => ({ ...prev, cardNumber: e.target.value }))}
+          className="w-full bg-transparent border-none focus:ring-0 text-sm"
+          onChange={(e) =>
+            setSearchFilters((prev) => ({
+              ...prev,
+              cardNumber: e.target.value
+            }))
+          }
           onFocus={() => setShowSearchSuggestions(true)}
         />
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowFilters(prev => !prev)}
+          onClick={() => setShowFilters((prev) => !prev)}
           className="hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <Filter className="w-4 h-4" />
         </Button>
       </div>
-  
       <AnimatePresence>
         {showFilters && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="absolute w-full mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-10"
+            className="absolute w-full mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-xl z-10"
           >
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium">نام بانک</label>
+                <label className="text-xs font-semibold">نام بانک</label>
                 <input
                   type="text"
-                  className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700"
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, bankName: e.target.value }))}
+                  className="w-full mt-1 p-2 rounded-md border 
+                             dark:bg-gray-700 text-sm focus:outline-none"
+                  onChange={(e) =>
+                    setSearchFilters((prev) => ({ ...prev, bankName: e.target.value }))
+                  }
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">محدوده تاریخ</label>
+                <label className="text-xs font-semibold">محدوده تاریخ</label>
                 <div className="flex gap-2">
                   <input
                     type="date"
-                    className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700"
-                    onChange={(e) => setSearchFilters(prev => ({
-                      ...prev,
-                      dateRange: { ...prev.dateRange, start: e.target.value }
-                    }))}
+                    className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700 text-sm"
+                    onChange={(e) =>
+                      setSearchFilters((prev) => ({
+                        ...prev,
+                        dateRange: { ...prev.dateRange, start: e.target.value }
+                      }))
+                    }
                   />
                   <input
                     type="date"
-                    className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700"
-                    onChange={(e) => setSearchFilters(prev => ({
-                      ...prev,
-                      dateRange: { ...prev.dateRange, end: e.target.value }
-                    }))}
+                    className="w-full mt-1 p-2 rounded-md border dark:bg-gray-700 text-sm"
+                    onChange={(e) =>
+                      setSearchFilters((prev) => ({
+                        ...prev,
+                        dateRange: { ...prev.dateRange, end: e.target.value }
+                      }))
+                    }
                   />
                 </div>
               </div>
@@ -561,37 +512,51 @@ const [selectedCards, setSelectedCards] = useState(new Set());
       </AnimatePresence>
     </motion.div>
   );
+
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(transaction => {
+    return transactions.filter((transaction) => {
       const matchesCardNumber = transaction.cardNumber.includes(searchFilters.cardNumber);
-      const matchesBankName = transaction.bank.title.toLowerCase().includes(searchFilters.bankName.toLowerCase());
-      
+      const matchesBankName = transaction.bank.title
+        .toLowerCase()
+        .includes(searchFilters.bankName.toLowerCase());
       const amount = typeof transaction.totalAmount === 'number' ? transaction.totalAmount : 0;
-      const matchesAmount = (!searchFilters.amountRange.min || amount >= parseFloat(searchFilters.amountRange.min)) &&
-                          (!searchFilters.amountRange.max || amount <= parseFloat(searchFilters.amountRange.max));
-      
-      const matchesTransactionCount = (!searchFilters.transactionCount.min || transaction.repetitionCount >= parseInt(searchFilters.transactionCount.min)) &&
-                                    (!searchFilters.transactionCount.max || transaction.repetitionCount <= parseInt(searchFilters.transactionCount.max));
-      
-      const matchesDateRange = (!searchFilters.dateRange.start || !searchFilters.dateRange.end) ||
-                              transaction.uniqueDates.some(date => {
-                                return date >= searchFilters.dateRange.start && date <= searchFilters.dateRange.end;
-                              });
-      
-      return matchesCardNumber && matchesBankName && matchesAmount && matchesTransactionCount && matchesDateRange;
+      const matchesAmount =
+        (!searchFilters.amountRange.min || amount >= parseFloat(searchFilters.amountRange.min)) &&
+        (!searchFilters.amountRange.max || amount <= parseFloat(searchFilters.amountRange.max));
+      const matchesTransactionCount =
+        (!searchFilters.transactionCount.min ||
+          transaction.repetitionCount >= parseInt(searchFilters.transactionCount.min)) &&
+        (!searchFilters.transactionCount.max ||
+          transaction.repetitionCount <= parseInt(searchFilters.transactionCount.max));
+      const matchesDateRange =
+        !searchFilters.dateRange.start ||
+        !searchFilters.dateRange.end ||
+        transaction.uniqueDates.some((date) => {
+          return date >= searchFilters.dateRange.start && date <= searchFilters.dateRange.end;
+        });
+      return (
+        matchesCardNumber && matchesBankName && matchesAmount && matchesTransactionCount && matchesDateRange
+      );
     });
   }, [transactions, searchFilters]);
+
   return (
-    
-    <div className={`min-h-screen flex items-center justify-center p-4 transition-colors ${
-      isDarkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white' 
-                : 'bg-gradient-to-br from-blue-50 to-indigo-100'
-    }`} style={persianFontStyle}>
+    <div
+      className={`min-h-screen flex items-center justify-center p-8 transition-colors ${
+        isDarkMode
+          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'
+          : 'bg-gradient-to-br from-pink-50 via-purple-50 to-rose-100'
+      }`}
+      style={persianFontStyle}
+    >
       <AlertDialog open={isAnalyzing}>
-        <AlertDialogContent className="bg-gradient-to-br from-blue-500 to-purple-600 text-white" style={persianFontStyle}>
+        <AlertDialogContent
+          className="bg-gradient-to-br from-blue-500 to-purple-500 text-white animate-pulse"
+          style={persianFontStyle}
+        >
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
             className="w-16 h-16 mx-auto mb-4"
           >
             <Calendar className="w-full h-full" />
@@ -605,21 +570,46 @@ const [selectedCards, setSelectedCards] = useState(new Set());
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+        <AlertDialogContent
+          className="bg-red-500 text-white rounded-xl shadow-2xl"
+          style={persianFontStyle}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center">خطا</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-100">{errorMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => setShowErrorDialog(false)}
+              className="bg-white text-red-600 hover:scale-105 transition-transform"
+            >
+              باشه
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent className="bg-gradient-to-br from-green-500 to-emerald-600 text-white" style={persianFontStyle}>
+        <AlertDialogContent
+          className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-2xl p-6 shadow-2xl"
+          style={persianFontStyle}
+        >
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
           >
             <AlertDialogHeader>
-              <AlertDialogTitle>{persianLabels.analysisComplete}</AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-200">
+              <AlertDialogTitle className="text-2xl font-bold mb-2">
+                {persianLabels.analysisComplete}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-100 text-sm">
                 {transactions.length} {persianLabels.cardsAnalyzed}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogAction className="bg-white text-green-600">
+              <AlertDialogAction className="bg-white text-green-600 hover:scale-105 transition-transform py-2 px-4 rounded-md">
                 {persianLabels.great}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -627,54 +617,85 @@ const [selectedCards, setSelectedCards] = useState(new Set());
         </AlertDialogContent>
       </AlertDialog>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-6xl"
       >
-        <Card className={`shadow-2xl ${isDarkMode ? 'bg-gray-800 border-gray-700' : ''}`}>
-          <CardHeader className={`${
-            isDarkMode ? 'bg-gradient-to-r from-gray-700 to-gray-600' 
-                      : 'bg-gradient-to-r from-blue-500 to-indigo-600'
-          } text-white flex justify-between items-center`}>
-            <CardTitle>{persianLabels.title}</CardTitle>
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="focus:outline-none"
-            >
+        <Card
+          className={`relative bg-white/30 dark:bg-gray-800/30 
+            backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden border-0`}
+        >
+          <CardHeader
+            className={`bg-gradient-to-r text-white flex justify-between items-center py-4 px-6 ${
+              isDarkMode
+                ? 'from-gray-700 via-gray-600 to-gray-500'
+                : 'from-indigo-500 via-purple-500 to-pink-500'
+            }`}
+          >
+            <CardTitle className="text-xl font-bold">{persianLabels.title}</CardTitle>
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className="focus:outline-none">
               {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
             </button>
           </CardHeader>
-
           <CardContent className="p-6 space-y-4">
-          <div className="flex flex-wrap gap-2 mb-4">
-              <Button onClick={analyzeData} className="bg-green-500 hover:bg-green-600">
+            <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
+              <Button
+                onClick={analyzeData}
+                className="bg-green-500 hover:bg-green-600 transition-transform hover:-translate-y-0.5 rounded-lg"
+              >
                 {persianLabels.analyze}
               </Button>
-              <Button onClick={handlePaste} className="bg-teal-500 hover:bg-teal-600"><ClipboardPaste className="ml-2" /> {persianLabels.paste}
+              <Button
+                onClick={handlePaste}
+                className="bg-teal-500 hover:bg-teal-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
+              >
+                <ClipboardPaste className="w-5 h-5" />
+                {persianLabels.paste}
               </Button>
-              <Button onClick={exportToExcel} className="bg-amber-500 hover:bg-amber-600">
+              <Button
+                onClick={exportToExcel}
+                className="bg-amber-500 hover:bg-amber-600 transition-transform hover:-translate-y-0.5 rounded-lg"
+              >
                 {persianLabels.export}
               </Button>
-              <Button onClick={handleReset} className="bg-red-500 hover:bg-red-600">
-                <Trash2 className="ml-2" /> {persianLabels.reset}
+              <Button
+                onClick={handleReset}
+                className="bg-red-500 hover:bg-red-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
+              >
+                <Trash2 className="w-5 h-5" />
+                {persianLabels.reset}
               </Button>
-              <Button onClick={copyFormattedData} className="bg-purple-500 hover:bg-purple-600">
-                <Copy className="ml-2" /> {persianLabels.copyData}
+              <Button
+                onClick={copyFormattedData}
+                className="bg-purple-500 hover:bg-purple-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
+              >
+                <Copy className="w-5 h-5" />
+                {persianLabels.copyData}
               </Button>
-              <Button onClick={handlePrint} className="bg-blue-500 hover:bg-blue-600">
-                <Printer className="ml-2" /> {persianLabels.print}
+              <Button
+                onClick={handlePrint}
+                className="bg-blue-500 hover:bg-blue-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
+              >
+                <Printer className="w-5 h-5" />
+                {persianLabels.print}
               </Button>
-              <Button onClick={resetFilters} className="bg-gray-500 hover:bg-gray-600">
-                <RefreshCcw className="ml-2" /> {persianLabels.refresh}
+              <Button
+                onClick={resetFilters}
+                className="bg-gray-500 hover:bg-gray-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
+              >
+                <RefreshCcw className="w-5 h-5" />
+                {persianLabels.refresh}
               </Button>
             </div>
 
-            <textarea 
-              className={`w-full min-h-[200px] p-3 border-2 rounded-lg ${
-                isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'border-blue-200 focus:ring-2 focus:ring-blue-500'
+            <textarea
+              className={`w-full min-h-[200px] p-4 border-2 rounded-xl focus:outline-none focus:ring-2 transition-colors 
+              ${
+                isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-purple-400'
+                  : 'bg-white border-blue-200 focus:ring-blue-500'
               }`}
               placeholder={persianLabels.textareaPlaceholder}
               value={inputData}
@@ -682,79 +703,93 @@ const [selectedCards, setSelectedCards] = useState(new Set());
               style={persianFontStyle}
             />
 
-            <input 
+            <input
               type="text"
               placeholder={persianLabels.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full p-2 border rounded-lg ${
-                isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
-                          : 'border-blue-200 focus:ring-2 focus:ring-blue-500'
+              className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors 
+              ${
+                isDarkMode
+                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-purple-400'
+                  : 'bg-white border-blue-200 focus:ring-blue-500'
               }`}
               style={persianFontStyle}
             />
-{/* Filter Section */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm">{persianLabels.amountRange}</label>
+                <label className="text-sm font-semibold">{persianLabels.amountRange}</label>
                 <div className="flex gap-2">
                   <input
                     type="number"
                     placeholder={persianLabels.from}
                     value={amountFilter.min}
-                    onChange={(e) => setAmountFilter(prev => ({ ...prev, min: e.target.value }))}
-                    className={`w-full p-2 border rounded-lg ${
-                      isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
-                                : 'border-blue-200'
+                    onChange={(e) => setAmountFilter((prev) => ({ ...prev, min: e.target.value }))}
+                    className={`w-full p-3 border rounded-xl transition-colors 
+                    ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-blue-200'
                     }`}
                   />
                   <input
                     type="number"
                     placeholder={persianLabels.to}
                     value={amountFilter.max}
-                    onChange={(e) => setAmountFilter(prev => ({ ...prev, max: e.target.value }))}
-                    className={`w-full p-2 border rounded-lg ${
-                      isDarkMode ? 'bg-gray-700 border-gray-600 text-white' 
-                                : 'border-blue-200'
+                    onChange={(e) => setAmountFilter((prev) => ({ ...prev, max: e.target.value }))}
+                    className={`w-full p-3 border rounded-xl transition-colors 
+                    ${
+                      isDarkMode
+                        ? 'bg-gray-700 border-gray-600 text-white'
+                        : 'bg-white border-blue-200'
                     }`}
                   />
                 </div>
               </div>
-
-              {/* ... Previous search input ... */}
             </div>
 
-            {/* Statistics Section */}
             {statistics && (
-              <div className={`p-4 rounded-lg ${
-                isDarkMode ? 'bg-gray-700' : 'bg-white'
-              } grid grid-cols-1 md:grid-cols-3 gap-4`}>
+              <div
+                className={`p-4 rounded-xl my-4 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-md ${
+                  isDarkMode ? 'bg-gray-700' : 'bg-white'
+                }`}
+              >
                 <div className="text-center">
-                  <div className="text-sm text-gray-500">{persianLabels.totalTransactions}</div>
-                  <div className="text-xl font-bold">{formatNumber(statistics.totalTransactions)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">{persianLabels.totalTransactions}</div>
+                  <div className="text-xl font-bold mt-1">
+                    {formatNumber(statistics.totalTransactions)}
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-sm text-gray-500">{persianLabels.totalAmount}</div>
-                  <div className="text-xl font-bold">{formatNumber(statistics.totalAmount)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">{persianLabels.totalAmount}</div>
+                  <div className="text-xl font-bold mt-1">
+                    {formatNumber(statistics.totalAmount)}
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-sm text-gray-500">{persianLabels.averageAmount}</div>
-                  <div className="text-xl font-bold">{formatNumber(Math.round(statistics.averageAmount))}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">{persianLabels.averageAmount}</div>
+                  <div className="text-xl font-bold mt-1">
+                    {formatNumber(Math.round(statistics.averageAmount))}
+                  </div>
                 </div>
               </div>
             )}
+
             {transactions.length > 0 && (
-              <div className={`mt-4 p-4 rounded-lg ${
-                isDarkMode ? 'bg-gray-700' : 'bg-white shadow-md'
-              }`}>
+              <div
+                className={`mt-4 p-4 rounded-xl shadow-lg transition-colors ${
+                  isDarkMode ? 'bg-gray-700' : 'bg-white'
+                }`}
+              >
                 <div className="overflow-x-auto" style={persianFontStyle}>
-                  <table className="w-full">
+                  <table className="w-full text-sm">
                     <thead>
-                      <tr>
+                      <tr className="border-b border-gray-200 dark:border-gray-600">
                         <th className="p-2 text-right">
-                          <button 
+                          <button
                             onClick={() => handleSort('cardNumber')}
-                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500"
+                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
                           >
                             {persianLabels.cardNumber}
                             <ArrowUpDown className="w-4 h-4" />
@@ -762,27 +797,27 @@ const [selectedCards, setSelectedCards] = useState(new Set());
                         </th>
                         <th className="p-2 text-right">{persianLabels.bank}</th>
                         <th className="p-2 text-left">
-                          <button 
+                          <button
                             onClick={() => handleSort('amount')}
-                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500"
+                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
                           >
                             {persianLabels.totalAmount}
                             <ArrowUpDown className="w-4 h-4" />
                           </button>
                         </th>
                         <th className="p-2 text-center">
-                          <button 
+                          <button
                             onClick={() => handleSort('repetitions')}
-                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500"
+                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
                           >
                             {persianLabels.repetitions}
                             <ArrowUpDown className="w-4 h-4" />
                           </button>
                         </th>
                         <th className="p-2 text-center">
-                          <button 
+                          <button
                             onClick={() => handleSort('days')}
-                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500"
+                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
                           >
                             {persianLabels.daysCount}
                             <ArrowUpDown className="w-4 h-4" />
@@ -791,84 +826,103 @@ const [selectedCards, setSelectedCards] = useState(new Set());
                         <th className="p-2 text-right">{persianLabels.dates}</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
                       {sortedTransactions.map((t, index) => (
-                        <motion.tr 
+                        <motion.tr
                           key={index}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className={`border-b ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'}`}
+                          transition={{ delay: index * 0.07 }}
+                          className={`border-b dark:border-gray-600 ${
+                            isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'
+                          }`}
                         >
                           <td className="p-2 text-right">{t.cardNumber}</td>
                           <td className="p-2 text-right">{t.bank.title}</td>
                           <td className="p-2 text-left">
-                            {typeof t.totalAmount === 'number' ? 
-                              t.totalAmount.toLocaleString() : 
-                              t.totalAmount}
+                            {typeof t.totalAmount === 'number'
+                              ? t.totalAmount.toLocaleString()
+                              : t.totalAmount}
                           </td>
                           <td className="p-2 text-center">{t.repetitionCount}</td>
                           <td className="p-2 text-center">{t.daysCount}</td>
-                          <td className="p-2 text-right" dir="ltr">{t.uniqueDates.join(', ')}</td>
+                          <td className="p-2 text-right" dir="ltr">
+                            {t.uniqueDates.join(', ')}
+                          </td>
                         </motion.tr>
                       ))}
-                      {filteredTransactions.map((t, index) => (
-  <motion.tr
-  key={index}
-  initial={{ opacity: 0, x: -20 }}
-  animate={{ opacity: 1, x: 0 }}
-  transition={{ delay: index * 0.05 }}
-  className={`
-    relative transition-all duration-200
-    ${hoveredRow === t.cardNumber ? 'bg-blue-50 dark:bg-gray-700' : ''}
-    ${selectedCards.has(t.cardNumber) ? 'bg-blue-100 dark:bg-gray-600' : ''}
-  `}
-  onMouseEnter={() => setHoveredRow(t.cardNumber)}
-  onMouseLeave={() => setHoveredRow(null)}
-  onClick={() => {
-    setSelectedCards((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(t.cardNumber)) {
-        newSet.delete(t.cardNumber);
-      } else {
-        newSet.add(t.cardNumber);
-      }
-      return newSet;
-    });
-  }}
->
-  <td className="p-4 border border-gray-200 dark:border-gray-700">
-    {t.cardNumber}
-  </td>
-  <td className="p-4 border border-gray-200 dark:border-gray-700">
-    {t.cardHolder}
-  </td>
-  <td className="p-4 border border-gray-200 dark:border-gray-700">
-    {t.expirationDate}
-  </td>
-  <td className="p-4 border border-gray-200 dark:border-gray-700">
-    {t.status}
-  </td>
-</motion.tr>
 
-))}
+                      {filteredTransactions.map((t, index) => (
+                        <motion.tr
+                          key={index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className={`
+                            relative transition-all duration-200
+                            ${
+                              hoveredRow === t.cardNumber
+                                ? 'bg-blue-50 dark:bg-gray-700'
+                                : ''
+                            }
+                            ${
+                              selectedCards.has(t.cardNumber)
+                                ? 'bg-blue-100 dark:bg-gray-600'
+                                : ''
+                            }
+                          `}
+                          onMouseEnter={() => setHoveredRow(t.cardNumber)}
+                          onMouseLeave={() => setHoveredRow(null)}
+                          onClick={() => {
+                            setSelectedCards((prev) => {
+                              const newSet = new Set(prev);
+                              if (newSet.has(t.cardNumber)) {
+                                newSet.delete(t.cardNumber);
+                              } else {
+                                newSet.add(t.cardNumber);
+                              }
+                              return newSet;
+                            });
+                          }}
+                        >
+                          <td className="p-4 border border-gray-200 dark:border-gray-700">
+                            {t.cardNumber}
+                          </td>
+                          <td className="p-4 border border-gray-200 dark:border-gray-700">
+                            {t.cardHolder}
+                          </td>
+                          <td className="p-4 border border-gray-200 dark:border-gray-700">
+                            {t.expirationDate}
+                          </td>
+                          <td className="p-4 border border-gray-200 dark:border-gray-700">
+                            {t.status}
+                          </td>
+                        </motion.tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               </div>
             )}
           </CardContent>
-          <CardFooter className={`px-6 py-3 text-sm ${
-            isDarkMode ? 'text-gray-400 border-t border-gray-700' 
-                      : 'text-gray-600 border-t'
-          }`} style={persianFontStyle}>
-            <div className="w-full flex justify-between items-center">
-              <span>توسعه داده شده توسط مهرشاد</span>
-              <span>تمامی حقوق محفوظ است</span>
+          <CardFooter
+            className={`px-6 py-3 text-xs border-t-0 rounded-b-3xl ${
+              isDarkMode ? 'text-gray-200' : 'text-gray-600'
+            }`}
+            style={persianFontStyle}
+          >
+            <div className="w-full flex flex-col md:flex-row justify-between items-center gap-2">
+              <span className="md:text-sm text-center">
+                توسعه داده شده توسط مهرشاد
+              </span>
+              <span className="md:text-sm text-center">تمامی حقوق محفوظ است</span>
             </div>
           </CardFooter>
         </Card>
       </motion.div>
+
+      <QuickActionsMenu />
+      <ToastContainer position="bottom-center" />
     </div>
   );
 };
