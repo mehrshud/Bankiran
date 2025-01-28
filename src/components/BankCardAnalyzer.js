@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, BarChart2, X } from 'lucide-react';
-import { Moon, Sun, ClipboardPaste, Trash2, ArrowUpDown, Calendar } from 'lucide-react';
+import { Moon, Sun, ClipboardPaste, Trash2, createIcons,ArrowUpDown, Calendar } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -164,7 +164,16 @@ const BankCardAnalyzer = () => {
   const formatNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   };
-
+ // Styles for dark/light mode
+ const colorScheme = {
+  bg: isDarkMode ? 'bg-gray-900' : 'bg-gray-50 text-black',
+  card: isDarkMode ? 'bg-gray-800' : 'bg-white',
+  text: isDarkMode ? 'text-gray-200' : 'text-gray-800',
+  input: isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-200',
+  hover: isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
+  button: isDarkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600',
+  accent: isDarkMode ? 'text-purple-400' : 'text-purple-600'
+};
   const statistics = useMemo(() => {
     if (!transactions.length) return null;
     const validAmounts = transactions.filter((t) => typeof t.totalAmount === 'number').map((t) => t.totalAmount);
@@ -542,28 +551,28 @@ const BankCardAnalyzer = () => {
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center p-8 transition-colors ${
+      className={`min-h-screen flex items-center justify-center p-4 md:p-8 transition-all duration-300 ${
         isDarkMode
-          ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'
-          : 'bg-gradient-to-br from-pink-50 via-purple-50 to-rose-100'
+          ? 'bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-purple-900 to-slate-900'
+          : 'bg-[conic-gradient(at_left,_var(--tw-gradient-stops))] from-rose-100 via-purple-100 to-slate-100'
       }`}
       style={persianFontStyle}
     >
-      <AlertDialog open={isAnalyzing}>
-        <AlertDialogContent
-          className="bg-gradient-to-br from-blue-500 to-purple-500 text-white animate-pulse"
-          style={persianFontStyle}
-        >
+       {/* Loading Dialog */}
+       <AlertDialog open={isAnalyzing}>
+        <AlertDialogContent className="bg-gradient-to-br from-violet-500 to-purple-500 border-0 text-white">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 mx-auto mb-4"
+            className="w-20 h-20 mx-auto mb-6"
           >
             <Calendar className="w-full h-full" />
           </motion.div>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-center">{persianLabels.analyzing}</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-200">
+            <AlertDialogTitle className="text-2xl font-bold text-center">
+              {persianLabels.analyzing}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-100 text-center">
               {persianLabels.processingData}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -618,28 +627,33 @@ const BankCardAnalyzer = () => {
       </AlertDialog>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-6xl"
+        className="w-full max-w-7xl"
       >
-        <Card
-          className={`relative bg-white/30 dark:bg-gray-800/30 
-            backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden border-0`}
-        >
-          <CardHeader
-            className={`bg-gradient-to-r text-white flex justify-between items-center py-4 px-6 ${
-              isDarkMode
-                ? 'from-gray-700 via-gray-600 to-gray-500'
-                : 'from-indigo-500 via-purple-500 to-pink-500'
-            }`}
-          >
-            <CardTitle className="text-xl font-bold">{persianLabels.title}</CardTitle>
-            <button onClick={() => setIsDarkMode(!isDarkMode)} className="focus:outline-none">
-              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-            </button>
+          <Card className="backdrop-blur-xl border-0 shadow-2xl overflow-hidden rounded-3xl">
+          <CardHeader className="relative overflow-hidden p-6">
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 opacity-90"></div>
+            <div className="relative flex justify-between items-center z-10">
+              <CardTitle className="text-2xl font-bold text-white">
+                {persianLabels.title}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="text-white hover:bg-white/20"
+              >
+                {isDarkMode ? (
+                  <Sun className="w-6 h-6" />
+                ) : (
+                  <Moon className="w-6 h-6" />
+                )}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="p-6 space-y-6">
             <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
               <Button
                 onClick={analyzeData}
@@ -658,6 +672,7 @@ const BankCardAnalyzer = () => {
                 onClick={exportToExcel}
                 className="bg-amber-500 hover:bg-amber-600 transition-transform hover:-translate-y-0.5 rounded-lg"
               >
+                <createIcons className="w-5 h-5" />
                 {persianLabels.export}
               </Button>
               <Button
@@ -681,111 +696,59 @@ const BankCardAnalyzer = () => {
                 <Printer className="w-5 h-5" />
                 {persianLabels.print}
               </Button>
-              <Button
-                onClick={resetFilters}
-                className="bg-gray-500 hover:bg-gray-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
-              >
-                <RefreshCcw className="w-5 h-5" />
-                {persianLabels.refresh}
-              </Button>
+              
             </div>
 
             <textarea
-              className={`w-full min-h-[200px] p-4 border-2 rounded-xl focus:outline-none focus:ring-2 transition-colors 
-              ${
-                isDarkMode
-                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-purple-400'
-                  : 'bg-white border-blue-200 focus:ring-blue-500'
-              }`}
+              className={`w-full min-h-[200px] p-4 rounded-xl border-2 focus:ring-2 transition-all duration-300
+                ${
+                  isDarkMode
+                    ? 'bg-gray-800 border-gray-700 text-white focus:ring-violet-400'
+                    : 'bg-white text-black border-violet-200 focus:ring-violet-500'
+                }`}
               placeholder={persianLabels.textareaPlaceholder}
               value={inputData}
               onChange={(e) => setInputData(e.target.value)}
               style={persianFontStyle}
             />
 
-            <input
-              type="text"
-              placeholder={persianLabels.searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors 
-              ${
-                isDarkMode
-                  ? 'bg-gray-700 border-gray-600 text-white focus:ring-purple-400'
-                  : 'bg-white border-blue-200 focus:ring-blue-500'
-              }`}
-              style={persianFontStyle}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold">{persianLabels.amountRange}</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder={persianLabels.from}
-                    value={amountFilter.min}
-                    onChange={(e) => setAmountFilter((prev) => ({ ...prev, min: e.target.value }))}
-                    className={`w-full p-3 border rounded-xl transition-colors 
-                    ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-blue-200'
-                    }`}
-                  />
-                  <input
-                    type="number"
-                    placeholder={persianLabels.to}
-                    value={amountFilter.max}
-                    onChange={(e) => setAmountFilter((prev) => ({ ...prev, max: e.target.value }))}
-                    className={`w-full p-3 border rounded-xl transition-colors 
-                    ${
-                      isDarkMode
-                        ? 'bg-gray-700 border-gray-600 text-white'
-                        : 'bg-white border-blue-200'
-                    }`}
-                  />
-                </div>
-              </div>
-            </div>
-
+            {/* Statistics Cards */}
             {statistics && (
-              <div
-                className={`p-4 rounded-xl my-4 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-md ${
-                  isDarkMode ? 'bg-gray-700' : 'bg-white'
-                }`}
-              >
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-300">{persianLabels.totalTransactions}</div>
-                  <div className="text-xl font-bold mt-1">
-                    {formatNumber(statistics.totalTransactions)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-300">{persianLabels.totalAmount}</div>
-                  <div className="text-xl font-bold mt-1">
-                    {formatNumber(statistics.totalAmount)}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs text-gray-500 dark:text-gray-300">{persianLabels.averageAmount}</div>
-                  <div className="text-xl font-bold mt-1">
-                    {formatNumber(Math.round(statistics.averageAmount))}
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    label: persianLabels.totalTransactions,
+                    value: formatNumber(statistics.totalTransactions)
+                  },
+                  // ... other stats
+                ].map((stat, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`p-4 rounded-2xl ${
+                      isDarkMode ? 'bg-gray-800' : 'bg-white text-black'
+                    } shadow-lg hover:shadow-xl transition-all duration-300`}
+                  >
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {stat.label}
+                    </div>
+                    <div className="text-2xl font-bold mt-1">{stat.value}</div>
+                  </motion.div>
+                ))}
               </div>
             )}
 
-            {transactions.length > 0 && (
-              <div
-                className={`mt-4 p-4 rounded-xl shadow-lg transition-colors ${
-                  isDarkMode ? 'bg-gray-700' : 'bg-white'
-                }`}
-              >
-                <div className="overflow-x-auto" style={persianFontStyle}>
-                  <table className="w-full text-sm">
+              {/* Table Section */}
+              {transactions.length > 0 && (
+              <div className={`rounded-xl overflow-hidden shadow-lg ${
+                isDarkMode ? 'bg-gray-800' : 'bg-white text-black'
+              }`}>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-600">
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
                         <th className="p-2 text-right">
                           <button
                             onClick={() => handleSort('cardNumber')}
@@ -834,7 +797,7 @@ const BankCardAnalyzer = () => {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.07 }}
                           className={`border-b dark:border-gray-600 ${
-                            isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'
+                            isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50 text-black'
                           }`}
                         >
                           <td className="p-2 text-right">{t.cardNumber}</td>
@@ -907,15 +870,14 @@ const BankCardAnalyzer = () => {
           </CardContent>
           <CardFooter
             className={`px-6 py-3 text-xs border-t-0 rounded-b-3xl ${
-              isDarkMode ? 'text-gray-200' : 'text-gray-600'
+              isDarkMode ? 'text-gray-200' : 'text-gray-600 text-black'
             }`}
             style={persianFontStyle}
           >
             <div className="w-full flex flex-col md:flex-row justify-between items-center gap-2">
               <span className="md:text-sm text-center">
-                توسعه داده شده توسط مهرشاد
-              </span>
-              <span className="md:text-sm text-center">تمامی حقوق محفوظ است</span>
+All Right Reserved: Capt. Esmaeili              </span>
+              <span className="md:text-sm text-center">💗 Made With </span>
             </div>
           </CardFooter>
         </Card>
