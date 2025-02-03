@@ -318,37 +318,57 @@ const statistics = useMemo(() => {
   }, []);
 
   const extractCardAmountAndDate = useCallback((line) => {
-    // Split by any whitespace and filter out empty strings
-    const parts = line.trim().split(/\s+/).filter(Boolean);
-    
+    // 1. Clean the line (remove non-printable characters, tabs, etc.)
+    const cleanLine = line
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/\t+/g, ' ')
+      .replace(/\s+/g, ' ');
+  
+    if (!cleanLine) return null;
+  
     let cardNumber = null;
     let amount = null;
     let date = null;
-
+  
+    // 2. Extract components by splitting only on spaces or tabs
+    const parts = cleanLine.split(/\s+/);
+  
+    // 3. Extract date from the first column
+    if (parts.length > 0) {
+      date = parts[0]; // Assuming the first part is always the date
+    }
+  
+    // 4. Extract amount by finding the first valid number with commas
     for (const part of parts) {
-      // Check for 16-digit card number
-      if (/^\d{16}$/.test(part)) {
-        cardNumber = part;
-      } 
-      // Check for amount (purely numeric)
-      else if (/^\d+$/.test(part)) {
-        amount = parseInt(part);
-      }
-      // Check for date in format YYYY/MM/DD
-      else if (/^1\d{3}\/\d{2}\/\d{2}$/.test(part)) {
-        date = part;
+      const numberMatch = part.match(/^\d{1,3}(?:,\d{3})*$/); // Matches numbers with thousands separators
+      if (numberMatch) {
+        amount = parseInt(numberMatch[0].replace(/,/g, ''), 10);
+        break; // Stop after finding the first valid amount
       }
     }
-
-    if (cardNumber && amount && date) {
-      return {
-        cardNumber,
-        amount,
-        date
-      };
+  
+    // 5. Extract the card number by finding the last valid 16-digit number
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const cleanPart = parts[i].replace(/\D/g, ''); // Remove non-digits
+      if (cleanPart.length === 16) {
+        cardNumber = cleanPart;
+        break;
+      }
     }
-    return null;
+  
+    // 6. Ignore entries where the amount or card number is 0
+    if (!cardNumber || amount === 0) {
+      return null;
+    }
+  
+    return {
+      cardNumber,
+      amount,
+      date
+    };
   }, []);
+  
 
   const analyzeData = useCallback(async () => {
     setIsAnalyzing(true);
