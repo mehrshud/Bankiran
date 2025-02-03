@@ -162,7 +162,7 @@ const BankCardAnalyzer = () => {
   const [selectedCards, setSelectedCards] = useState(new Set());
 
   const formatNumber = (num) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' ریال';
   };
  // Styles for dark/light mode
  const colorScheme = {
@@ -174,17 +174,48 @@ const BankCardAnalyzer = () => {
   button: isDarkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600',
   accent: isDarkMode ? 'text-purple-400' : 'text-purple-600'
 };
-  const statistics = useMemo(() => {
-    if (!transactions.length) return null;
-    const validAmounts = transactions.filter((t) => typeof t.totalAmount === 'number').map((t) => t.totalAmount);
-    return {
-      totalTransactions: transactions.reduce((sum, t) => sum + t.repetitionCount, 0),
-      totalAmount: validAmounts.reduce((sum, amount) => sum + amount, 0),
-      averageAmount: validAmounts.length
-        ? validAmounts.reduce((sum, amount) => sum + amount, 0) / validAmounts.length
-        : 0
-    };
-  }, [transactions]);
+const statistics = useMemo(() => {
+  if (!transactions.length) return null;
+  
+  const validAmounts = transactions.filter(t => typeof t.totalAmount === 'number').map(t => t.totalAmount);
+  const uniqueBanks = new Set(transactions.map(t => t.bank.name));
+  const totalDays = new Set(transactions.flatMap(t => t.uniqueDates)).size;
+  
+  // Calculate daily statistics
+  const transactionsByDate = transactions.flatMap(t => 
+    t.uniqueDates.map(date => ({ date, amount: t.totalAmount }))
+  );
+  const dailyAmounts = transactionsByDate.reduce((acc, curr) => {
+    if (typeof curr.amount === 'number') {
+      acc[curr.date] = (acc[curr.date] || 0) + curr.amount;
+    }
+    return acc;
+  }, {});
+  
+  const dailyAmountValues = Object.values(dailyAmounts);
+  const maxDailyAmount = Math.max(...dailyAmountValues);
+  const minDailyAmount = Math.min(...dailyAmountValues);
+  const avgDailyAmount = dailyAmountValues.reduce((a, b) => a + b, 0) / dailyAmountValues.length;
+
+  return {
+    totalTransactions: transactions.reduce((sum, t) => sum + t.repetitionCount, 0),
+    totalAmount: validAmounts.reduce((sum, amount) => sum + amount, 0),
+    averageAmount: validAmounts.length ? validAmounts.reduce((sum, amount) => sum + amount, 0) / validAmounts.length : 0,
+    uniqueCards: transactions.length,
+    uniqueBanksCount: uniqueBanks.size,
+    totalDays: totalDays,
+    maxDailyAmount: maxDailyAmount,
+    minDailyAmount: minDailyAmount,
+    averageDailyAmount: avgDailyAmount,
+    highestTransaction: Math.max(...validAmounts),
+    lowestTransaction: Math.min(...validAmounts),
+    averageTransactionsPerDay: transactions.reduce((sum, t) => sum + t.repetitionCount, 0) / totalDays,
+    mostActiveBank: [...uniqueBanks].reduce((max, bank) => {
+      const count = transactions.filter(t => t.bank.name === bank).length;
+      return count > max.count ? { bank, count } : max;
+    }, { bank: '', count: 0 }).bank
+  };
+}, [transactions]);
 
   const filteredAndSortedTransactions = useMemo(() => {
     let filtered = [...transactions];
@@ -287,33 +318,33 @@ const BankCardAnalyzer = () => {
   }, []);
 
   const extractCardAmountAndDate = useCallback((line) => {
-    const cleanLine = line.replace(/[^\d.,/\s]/g, ' ').trim();
-    const parts = cleanLine.split(/\s+/).filter((part) => part.length > 0);
-    if (parts.length === 0) return null;
-    if (parts.length === 1 && /^\d{16}$/.test(parts[0])) {
-      return {
-        cardNumber: parts[0],
-        amount: 0,
-        date: new Date().toISOString().slice(0, 10).replace(/-/g, '/')
-      };
-    }
+    // Split by any whitespace and filter out empty strings
+    const parts = line.trim().split(/\s+/).filter(Boolean);
+    
     let cardNumber = null;
     let amount = null;
     let date = null;
-    parts.forEach((part) => {
+
+    for (const part of parts) {
+      // Check for 16-digit card number
       if (/^\d{16}$/.test(part)) {
         cardNumber = part;
-      } else if (/^\d+([.,]\d+)?$/.test(part)) {
-        amount = parseFloat(part.replace(',', '.'));
-      } else if (/^\d{4}\/\d{2}\/\d{2}$/.test(part)) {
+      } 
+      // Check for amount (purely numeric)
+      else if (/^\d+$/.test(part)) {
+        amount = parseInt(part);
+      }
+      // Check for date in format YYYY/MM/DD
+      else if (/^1\d{3}\/\d{2}\/\d{2}$/.test(part)) {
         date = part;
       }
-    });
-    if (cardNumber) {
+    }
+
+    if (cardNumber && amount && date) {
       return {
         cardNumber,
-        amount: amount || 0,
-        date: date || new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+        amount,
+        date
       };
     }
     return null;
@@ -717,9 +748,53 @@ const BankCardAnalyzer = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   {
-                    label: persianLabels.totalTransactions,
-                    value: formatNumber(statistics.totalTransactions)
+                    label: 'تعداد کل تراکنش‌ها',
+                    value: statistics.totalTransactions.toLocaleString()
                   },
+                  {
+                    label: 'مجموع کل مبالغ',
+                    value: formatNumber(statistics.totalAmount)
+                  },
+                  {
+                    label: 'میانگین مبلغ تراکنش',
+                    value: formatNumber(Math.round(statistics.averageAmount))
+                  },
+                  {
+                    label: 'تعداد کارت‌های منحصر به فرد',
+                    value: statistics.uniqueCards.toLocaleString()
+                  },
+                  {
+                    label: 'تعداد بانک‌های درگیر',
+                    value: statistics.uniqueBanksCount.toLocaleString()
+                  },
+                  {
+                    label: 'بازه زمانی (روز)',
+                    value: statistics.totalDays.toLocaleString()
+                  },
+                  {
+                    label: 'بیشترین تراکنش روزانه',
+                    value: formatNumber(statistics.maxDailyAmount)
+                  },
+                  {
+                    label: 'کمترین تراکنش روزانه',
+                    value: formatNumber(statistics.minDailyAmount)
+                  },
+                  {
+                    label: 'میانگین تراکنش روزانه',
+                    value: formatNumber(Math.round(statistics.averageDailyAmount))
+                  },
+                  {
+                    label: 'بیشترین مبلغ تراکنش',
+                    value: formatNumber(statistics.highestTransaction)
+                  },
+                  {
+                    label: 'کمترین مبلغ تراکنش',
+                    value: formatNumber(statistics.lowestTransaction)
+                  },
+                  {
+                    label: 'میانگین تعداد تراکنش روزانه',
+                    value: Math.round(statistics.averageTransactionsPerDay).toLocaleString()
+                  }
                   // ... other stats
                 ].map((stat, index) => (
                   <motion.div
@@ -746,124 +821,73 @@ const BankCardAnalyzer = () => {
                 isDarkMode ? 'bg-gray-800' : 'bg-white text-black'
               }`}>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="p-2 text-right">
-                          <button
-                            onClick={() => handleSort('cardNumber')}
-                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
-                          >
-                            {persianLabels.cardNumber}
-                            <ArrowUpDown className="w-4 h-4" />
-                          </button>
-                        </th>
-                        <th className="p-2 text-right">{persianLabels.bank}</th>
-                        <th className="p-2 text-left">
-                          <button
-                            onClick={() => handleSort('amount')}
-                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
-                          >
-                            {persianLabels.totalAmount}
-                            <ArrowUpDown className="w-4 h-4" />
-                          </button>
-                        </th>
-                        <th className="p-2 text-center">
-                          <button
-                            onClick={() => handleSort('repetitions')}
-                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
-                          >
-                            {persianLabels.repetitions}
-                            <ArrowUpDown className="w-4 h-4" />
-                          </button>
-                        </th>
-                        <th className="p-2 text-center">
-                          <button
-                            onClick={() => handleSort('days')}
-                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
-                          >
-                            {persianLabels.daysCount}
-                            <ArrowUpDown className="w-4 h-4" />
-                          </button>
-                        </th>
-                        <th className="p-2 text-right">{persianLabels.dates}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
-                      {sortedTransactions.map((t, index) => (
-                        <motion.tr
-                          key={index}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.07 }}
-                          className={`border-b dark:border-gray-600 ${
-                            isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50 text-black'
-                          }`}
-                        >
-                          <td className="p-2 text-right">{t.cardNumber}</td>
-                          <td className="p-2 text-right">{t.bank.title}</td>
-                          <td className="p-2 text-left">
-                            {typeof t.totalAmount === 'number'
-                              ? t.totalAmount.toLocaleString()
-                              : t.totalAmount}
-                          </td>
-                          <td className="p-2 text-center">{t.repetitionCount}</td>
-                          <td className="p-2 text-center">{t.daysCount}</td>
-                          <td className="p-2 text-right" dir="ltr">
-                            {t.uniqueDates.join(', ')}
-                          </td>
-                        </motion.tr>
-                      ))}
-
-                      {filteredTransactions.map((t, index) => (
-                        <motion.tr
-                          key={index}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className={`
-                            relative transition-all duration-200
-                            ${
-                              hoveredRow === t.cardNumber
-                                ? 'bg-blue-50 dark:bg-gray-700'
-                                : ''
-                            }
-                            ${
-                              selectedCards.has(t.cardNumber)
-                                ? 'bg-blue-100 dark:bg-gray-600'
-                                : ''
-                            }
-                          `}
-                          onMouseEnter={() => setHoveredRow(t.cardNumber)}
-                          onMouseLeave={() => setHoveredRow(null)}
-                          onClick={() => {
-                            setSelectedCards((prev) => {
-                              const newSet = new Set(prev);
-                              if (newSet.has(t.cardNumber)) {
-                                newSet.delete(t.cardNumber);
-                              } else {
-                                newSet.add(t.cardNumber);
-                              }
-                              return newSet;
-                            });
-                          }}
-                        >
-                          <td className="p-4 border border-gray-200 dark:border-gray-700">
-                            {t.cardNumber}
-                          </td>
-                          <td className="p-4 border border-gray-200 dark:border-gray-700">
-                            {t.cardHolder}
-                          </td>
-                          <td className="p-4 border border-gray-200 dark:border-gray-700">
-                            {t.expirationDate}
-                          </td>
-                          <td className="p-4 border border-gray-200 dark:border-gray-700">
-                            {t.status}
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <table className="w-full">
+      <thead>
+        <tr className="border-b border-gray-200 dark:border-gray-700">
+          <th className="p-2 text-right">
+            <button
+              onClick={() => handleSort('cardNumber')}
+              className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
+            >
+              {persianLabels.cardNumber}
+              <ArrowUpDown className="w-4 h-4" />
+            </button>
+          </th>
+          <th className="p-2 text-right">{persianLabels.bank}</th>
+          <th className="p-2 text-left">
+            <button
+              onClick={() => handleSort('amount')}
+              className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
+            >
+              مبلغ تراکنش (ریال)
+              <ArrowUpDown className="w-4 h-4" />
+            </button>
+          </th>
+          <th className="p-2 text-center">
+            <button
+              onClick={() => handleSort('repetitions')}
+              className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+            >
+              {persianLabels.repetitions}
+              <ArrowUpDown className="w-4 h-4" />
+            </button>
+          </th>
+          <th className="p-2 text-center">
+            <button
+              onClick={() => handleSort('days')}
+              className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+            >
+              {persianLabels.daysCount}
+              <ArrowUpDown className="w-4 h-4" />
+            </button>
+          </th>
+          <th className="p-2 text-right">تاریخ تراکنش</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filteredAndSortedTransactions.map((t, index) => (
+          <motion.tr
+            key={index}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.07 }}
+            className={`border-b dark:border-gray-600 ${
+              isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'
+            }`}
+          >
+            <td className="p-2 text-right">{t.cardNumber}</td>
+            <td className="p-2 text-right">{t.bank.title}</td>
+            <td className="p-2 text-left" dir="ltr">
+              {typeof t.totalAmount === 'number' ? formatNumber(t.totalAmount) : t.totalAmount}
+            </td>
+            <td className="p-2 text-center">{t.repetitionCount}</td>
+            <td className="p-2 text-center">{t.daysCount}</td>
+            <td className="p-2 text-right">{t.uniqueDates.join('، ')}</td>
+          </motion.tr>
+        ))}
+      </tbody>
+    </table>
+  
                 </div>
               </div>
             )}
