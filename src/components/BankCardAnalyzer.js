@@ -122,7 +122,7 @@ const persianLabels = {
 };
 
 const persianFontStyle = {
-  fontFamily: "'IRANSans', 'IRANSansWeb', 'Tahoma', sans-serif",
+  fontFamily: "'IRANSans', 'Tahoma', sans-serif",
   direction: 'rtl'
 };
 
