@@ -2,8 +2,34 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, BarChart2, X } from 'lucide-react';
-import { Moon, Sun, ClipboardPaste, Trash2, createIcons,ArrowUpDown, Calendar } from 'lucide-react';
+import { 
+  Search, 
+  Filter, 
+  BarChart2, 
+  Moon, 
+  Sun, 
+  ClipboardPaste, 
+  Trash2, 
+  ArrowUpDown, 
+  Calendar,
+  Copy, 
+  Printer,
+  Database,
+  Wallet,
+  BarChart,
+  CreditCard,
+  Building,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  ArrowUp,
+  ArrowDown,
+  PieChart,
+  CheckCircle,
+  Download,
+  LineChart,
+  AlertTriangle
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,7 +42,6 @@ import {
   AlertDialogTitle,
   AlertDialogAction
 } from '@/components/ui/alert-dialog';
-import { Copy, Printer, RefreshCcw } from 'lucide-react';
 
 // Bank database constant
 const BANK_DATABASE = [
@@ -114,29 +139,38 @@ const BankCardAnalyzer = () => {
   };
   const QuickActionsMenu = () => (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className="fixed bottom-6 right-6 flex gap-3"
+      className="fixed bottom-6 right-6 flex gap-3 z-50"
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 100 }}
     >
-      <Button
-        onClick={analyzeData}
-        className="rounded-full w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 hover:scale-105 transition-transform"
-      >
-        <BarChart2 className="w-6 h-6" />
-      </Button>
-      <Button
-        onClick={handlePaste}
-        className="rounded-full w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 hover:scale-105 transition-transform"
-      >
-        <ClipboardPaste className="w-6 h-6" />
-      </Button>
-      <Button
-        onClick={toggleTheme}
-        className="rounded-full w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 hover:scale-105 transition-transform"
-      >
-        {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-      </Button>
+      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+        <Button
+          onClick={analyzeData}
+          className="rounded-full w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg"
+        >
+          <BarChart2 className="w-6 h-6" />
+        </Button>
+      </motion.div>
+      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+        <Button
+          onClick={handlePaste}
+          className="rounded-full w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 shadow-lg"
+        >
+          <ClipboardPaste className="w-6 h-6" />
+        </Button>
+      </motion.div>
+      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+        <Button
+          onClick={() => {
+            setIsDarkMode(!isDarkMode);
+            document.documentElement.classList.toggle('dark');
+          }}
+          className="rounded-full w-14 h-14 bg-gradient-to-r from-purple-500 to-purple-600 shadow-lg"
+        >
+          {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+        </Button>
+      </motion.div>
     </motion.div>
   );
 
@@ -180,7 +214,7 @@ const statistics = useMemo(() => {
   const validAmounts = transactions.filter(t => typeof t.totalAmount === 'number').map(t => t.totalAmount);
   const uniqueBanks = new Set(transactions.map(t => t.bank.name));
   const totalDays = new Set(transactions.flatMap(t => t.uniqueDates)).size;
-  
+
   // Calculate daily statistics
   const transactionsByDate = transactions.flatMap(t => 
     t.uniqueDates.map(date => ({ date, amount: t.totalAmount }))
@@ -318,7 +352,7 @@ const filteredAndSortedTransactions = useMemo(() => {
     setSortConfig({ key: 'cardNumber', direction: 'asc' });
   };
 
-  const validateCardNumber = useCallback((cardNumber) => {
+const validateCardNumber = useCallback((cardNumber) => {
     const cleanNumber = cardNumber.replace(/\D/g, '');
     if (cleanNumber.length !== 16) return false;
     let sum = 0;
@@ -649,342 +683,618 @@ const handleSort = (key) => {
 
   return (
     <div
-      className={`min-h-screen flex items-center justify-center p-4 md:p-8 transition-all duration-300 ${
+      className={`min-h-screen flex items-center justify-center p-4 md:p-8 transition-all duration-700 ${
         isDarkMode
-          ? 'bg-[conic-gradient(at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-purple-900 to-slate-900'
-          : 'bg-[conic-gradient(at_left,_var(--tw-gradient-stops))] from-rose-100 via-purple-100 to-slate-100'
+          ? 'bg-gradient-to-br from-gray-900 via-purple-950 to-indigo-900'
+          : 'bg-gradient-to-br from-violet-50 via-fuchsia-50 to-indigo-50'
       }`}
       style={persianFontStyle}
     >
-       {/* Loading Dialog */}
-       <AlertDialog open={isAnalyzing}>
-        <AlertDialogContent className="bg-gradient-to-br from-violet-500 to-purple-500 border-0 text-white">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-            className="w-20 h-20 mx-auto mb-6"
-          >
-            <Calendar className="w-full h-full" />
-          </motion.div>
+      {/* Loading Dialog with improved animation */}
+      <AlertDialog open={isAnalyzing}>
+        <AlertDialogContent className="bg-gradient-to-br from-violet-600 to-indigo-600 border-0 text-white overflow-hidden p-8 rounded-2xl shadow-xl">
+          <div className="relative">
+            <motion.div
+              className="absolute inset-0 bg-white/10 rounded-full blur-3xl"
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div
+              className="w-24 h-24 mx-auto mb-8 relative"
+              initial={{ rotateY: 0 }}
+              animate={{ 
+                rotateY: 360,
+                scale: [1, 1.1, 1],
+              }}
+              transition={{ 
+                rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
+                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              }}
+            >
+              <Calendar className="w-full h-full text-white drop-shadow-lg" />
+            </motion.div>
+          </div>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-bold text-center">
-              {persianLabels.analyzing}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-100 text-center">
-              {persianLabels.processingData}
-            </AlertDialogDescription>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <AlertDialogTitle className="text-3xl font-bold text-center mb-2">
+                {persianLabels.analyzing}
+              </AlertDialogTitle>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <AlertDialogDescription className="text-gray-100 text-center">
+                {persianLabels.processingData}
+              </AlertDialogDescription>
+            </motion.div>
           </AlertDialogHeader>
+          <motion.div 
+            className="mt-6 flex justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            <div className="flex space-x-2">
+              {[0, 1, 2, 3].map((dot) => (
+                <motion.div
+                  key={dot}
+                  className="w-3 h-3 bg-white rounded-full"
+                  animate={{
+                    scale: [1, 1.5, 1],
+                    opacity: [0.7, 1, 0.7],
+                  }}
+                  transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    delay: dot * 0.2,
+                    ease: "easeInOut",
+                  }}
+                />
+              ))}
+            </div>
+          </motion.div>
         </AlertDialogContent>
       </AlertDialog>
-
+  
+      {/* Error Dialog */}
       <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
         <AlertDialogContent
-          className="bg-red-500 text-white rounded-xl shadow-2xl"
-          style={persianFontStyle}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-center">خطا</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-100">{errorMessage}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction
-              onClick={() => setShowErrorDialog(false)}
-              className="bg-white text-red-600 hover:scale-105 transition-transform"
-            >
-              باشه
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent
-          className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-2xl p-6 shadow-2xl"
+          className="bg-gradient-to-br from-red-500 to-red-700 text-white rounded-xl shadow-2xl border-0 p-6"
           style={persianFontStyle}
         >
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
           >
+            <div className="flex justify-center mb-4">
+              <motion.div
+                initial={{ rotate: 0 }}
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <AlertTriangle className="w-16 h-16 text-white opacity-90" />
+              </motion.div>
+            </div>
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-2xl font-bold mb-2">
-                {persianLabels.analysisComplete}
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-gray-100 text-sm">
-                {transactions.length} {persianLabels.cardsAnalyzed}
+              <AlertDialogTitle className="text-2xl font-bold text-center">خطا</AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-100 text-center mt-2">
+                {errorMessage}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction className="bg-white text-green-600 hover:scale-105 transition-transform py-2 px-4 rounded-md">
-                {persianLabels.great}
-              </AlertDialogAction>
+            <AlertDialogFooter className="mt-6">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-full"
+              >
+                <AlertDialogAction
+                  onClick={() => setShowErrorDialog(false)}
+                  className="bg-white text-red-600 hover:bg-gray-100 w-full py-3 rounded-lg font-medium shadow-lg"
+                >
+                  باشه
+                </AlertDialogAction>
+              </motion.div>
             </AlertDialogFooter>
           </motion.div>
         </AlertDialogContent>
       </AlertDialog>
-
+  
+      {/* Success Dialog */}
+      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <AlertDialogContent
+          className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-8 shadow-2xl border-0 overflow-hidden"
+          style={persianFontStyle}
+        >
+          <motion.div
+            className="absolute inset-0 bg-white/10"
+            animate={{
+              backgroundPosition: ["0% 0%", "100% 100%"],
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            style={{ 
+              backgroundSize: "200% 200%", 
+              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%)" 
+            }}
+          />
+          <motion.div
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          >
+            <div className="flex justify-center mb-6">
+              <motion.div
+                animate={{ 
+                  y: [0, -10, 0],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut" 
+                }}
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", delay: 0.2 }}
+                  className="bg-white/30 p-4 rounded-full"
+                >
+                  <CheckCircle className="w-16 h-16 text-white" />
+                </motion.div>
+              </motion.div>
+            </div>
+            <AlertDialogHeader>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <AlertDialogTitle className="text-3xl font-bold mb-2 text-center">
+                  {persianLabels.analysisComplete}
+                </AlertDialogTitle>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                <AlertDialogDescription className="text-gray-100 text-lg text-center">
+                  <span className="font-bold text-2xl">{transactions.length}</span> {persianLabels.cardsAnalyzed}
+                </AlertDialogDescription>
+              </motion.div>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-6">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-full"
+              >
+                <AlertDialogAction 
+                  className="bg-white text-emerald-600 hover:bg-gray-100 py-3 px-6 rounded-lg font-medium shadow-lg w-full"
+                >
+                  {persianLabels.great}
+                </AlertDialogAction>
+              </motion.div>
+            </AlertDialogFooter>
+          </motion.div>
+        </AlertDialogContent>
+      </AlertDialog>
+  
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-7xl"
       >
-          <Card className="backdrop-blur-xl border-0 shadow-2xl overflow-hidden rounded-3xl">
+        <Card className="backdrop-blur-xl border-0 shadow-2xl overflow-hidden rounded-3xl relative">
+          {/* Animated background patterns */}
+          <div className="absolute inset-0 overflow-hidden opacity-30 pointer-events-none">
+            <motion.div 
+              className={`absolute w-96 h-96 rounded-full filter blur-3xl ${isDarkMode ? 'bg-indigo-700' : 'bg-indigo-300'}`}
+              style={{ top: '-20%', right: '-10%' }}
+              animate={{ 
+                x: [0, 50, 0],
+                y: [0, 30, 0],
+              }}
+              transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <motion.div 
+              className={`absolute w-96 h-96 rounded-full filter blur-3xl ${isDarkMode ? 'bg-purple-700' : 'bg-fuchsia-300'}`}
+              style={{ bottom: '-20%', left: '-10%' }}
+              animate={{ 
+                x: [0, -40, 0],
+                y: [0, -20, 0],
+              }}
+              transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </div>
+  
           <CardHeader className="relative overflow-hidden p-6">
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 opacity-90"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 opacity-90"></div>
+            <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+            <motion.div 
+              className="absolute inset-0" 
+              style={{ 
+                backgroundImage: "url('data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='20' height='20'%3E%3Ccircle cx='3' cy='3' r='1.5' fill='white' opacity='0.2'/%3E%3C/svg%3E')",
+                backgroundSize: "20px 20px"
+              }}
+            />
             <div className="relative flex justify-between items-center z-10">
-              <CardTitle className="text-2xl font-bold text-white">
-                {persianLabels.title}
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="text-white hover:bg-white/20"
+              <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
               >
-                {isDarkMode ? (
-                  <Sun className="w-6 h-6" />
-                ) : (
-                  <Moon className="w-6 h-6" />
-                )}
-              </Button>
+                <CardTitle className="text-3xl font-bold text-white">
+                  {persianLabels.title}
+                </CardTitle>
+              </motion.div>
+              <motion.div
+                whileHover={{ rotate: 180 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsDarkMode(!isDarkMode)}
+                  className="text-white hover:bg-white/20 w-10 h-10 rounded-full"
+                >
+                  {isDarkMode ? (
+                    <Sun className="w-5 h-5" />
+                  ) : (
+                    <Moon className="w-5 h-5" />
+                  )}
+                </Button>
+              </motion.div>
             </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
-              <Button
-                onClick={analyzeData}
-                className="bg-green-500 hover:bg-green-600 transition-transform hover:-translate-y-0.5 rounded-lg"
-              >
-                {persianLabels.analyze}
-              </Button>
-              <Button
-                onClick={handlePaste}
-                className="bg-teal-500 hover:bg-teal-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
-              >
-                <ClipboardPaste className="w-5 h-5" />
-                {persianLabels.paste}
-              </Button>
-              <Button
-                onClick={exportToExcel}
-                className="bg-amber-500 hover:bg-amber-600 transition-transform hover:-translate-y-0.5 rounded-lg"
-              >
-                <createIcons className="w-5 h-5" />
-                {persianLabels.export}
-              </Button>
-              <Button
-                onClick={handleReset}
-                className="bg-red-500 hover:bg-red-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
-              >
-                <Trash2 className="w-5 h-5" />
-                {persianLabels.reset}
-              </Button>
-              <Button
-                onClick={copyFormattedData}
-                className="bg-purple-500 hover:bg-purple-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
-              >
-                <Copy className="w-5 h-5" />
-                {persianLabels.copyData}
-              </Button>
-              <Button
-                onClick={handlePrint}
-                className="bg-blue-500 hover:bg-blue-600 transition-transform hover:-translate-y-0.5 rounded-lg flex items-center gap-2"
-              >
-                <Printer className="w-5 h-5" />
-                {persianLabels.print}
-              </Button>
-              
-            </div>
-
-            <textarea
-              className={`w-full min-h-[200px] p-4 rounded-xl border-2 focus:ring-2 transition-all duration-300
-                ${
-                  isDarkMode
-                    ? 'bg-gray-800 border-gray-700 text-white focus:ring-violet-400'
-                    : 'bg-white text-black border-violet-200 focus:ring-violet-500'
-                }`}
-              placeholder={persianLabels.textareaPlaceholder}
-              value={inputData}
-              onChange={(e) => setInputData(e.target.value)}
-              style={persianFontStyle}
-            />
-
+  
+          <CardContent className="p-6 space-y-8 relative z-10">
+            <motion.div 
+              className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              {/* Action buttons with enhanced hover effects */}
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={analyzeData}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-emerald-500/30 border-0 rounded-xl px-4 py-2 font-medium"
+                >
+                  <motion.span
+                    animate={{ scale: [1, 1.03, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="flex items-center gap-2"
+                  >
+                    <LineChart className="w-5 h-5" />
+                    {persianLabels.analyze}
+                  </motion.span>
+                </Button>
+              </motion.div>
+  
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={handlePaste}
+                  className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white shadow-lg hover:shadow-teal-500/30 border-0 rounded-xl px-4 py-2 font-medium"
+                >
+                  <span className="flex items-center gap-2">
+                    <ClipboardPaste className="w-5 h-5" />
+                    {persianLabels.paste}
+                  </span>
+                </Button>
+              </motion.div>
+  
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={exportToExcel}
+                  className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-amber-500/30 border-0 rounded-xl px-4 py-2 font-medium"
+                >
+                  <span className="flex items-center gap-2">
+                    <Download className="w-5 h-5" />
+                    {persianLabels.export}
+                  </span>
+                </Button>
+              </motion.div>
+  
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={handleReset}
+                  className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-lg hover:shadow-red-500/30 border-0 rounded-xl px-4 py-2 font-medium"
+                >
+                  <span className="flex items-center gap-2">
+                    <Trash2 className="w-5 h-5" />
+                    {persianLabels.reset}
+                  </span>
+                </Button>
+              </motion.div>
+  
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={copyFormattedData}
+                  className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white shadow-lg hover:shadow-purple-500/30 border-0 rounded-xl px-4 py-2 font-medium"
+                >
+                  <span className="flex items-center gap-2">
+                    <Copy className="w-5 h-5" />
+                    {persianLabels.copyData}
+                  </span>
+                </Button>
+              </motion.div>
+  
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  onClick={handlePrint}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-blue-500/30 border-0 rounded-xl px-4 py-2 font-medium"
+                >
+                  <span className="flex items-center gap-2">
+                    <Printer className="w-5 h-5" />
+                    {persianLabels.print}
+                  </span>
+                </Button>
+              </motion.div>
+            </motion.div>
+  
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <textarea
+                className={`w-full min-h-[200px] p-6 rounded-2xl border-2 shadow-lg focus:ring-2 transition-all duration-300
+                  ${
+                    isDarkMode
+                      ? 'bg-gray-800/60 border-gray-700 text-white focus:ring-violet-400 focus:border-violet-400'
+                      : 'bg-white/90 text-black border-violet-200 focus:ring-violet-500 focus:border-violet-500'
+                  }`}
+                placeholder={persianLabels.textareaPlaceholder}
+                value={inputData}
+                onChange={(e) => setInputData(e.target.value)}
+                style={persianFontStyle}
+              />
+            </motion.div>
+  
             {/* Statistics Cards */}
             {statistics && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   {
                     label: 'تعداد کل تراکنش‌ها',
-                    value: statistics.totalTransactions.toLocaleString()
+                    value: statistics.totalTransactions.toLocaleString(),
+                    icon: <Database className="w-6 h-6" />,
+                    color: 'from-blue-500 to-indigo-600'
                   },
                   {
                     label: 'مجموع کل مبالغ',
-                    value: formatNumber(statistics.totalAmount)
+                    value: formatNumber(statistics.totalAmount),
+                    icon: <Wallet className="w-6 h-6" />,
+                    color: 'from-green-500 to-emerald-600'
                   },
                   {
                     label: 'میانگین مبلغ تراکنش',
-                    value: formatNumber(Math.round(statistics.averageAmount))
+                    value: formatNumber(Math.round(statistics.averageAmount)),
+                    icon: <BarChart className="w-6 h-6" />,
+                    color: 'from-amber-500 to-yellow-600'
                   },
                   {
                     label: 'تعداد کارت‌های منحصر به فرد',
-                    value: statistics.uniqueCards.toLocaleString()
+                    value: statistics.uniqueCards.toLocaleString(),
+                    icon: <CreditCard className="w-6 h-6" />,
+                    color: 'from-purple-500 to-violet-600'
                   },
                   {
                     label: 'تعداد بانک‌های درگیر',
-                    value: statistics.uniqueBanksCount.toLocaleString()
+                    value: statistics.uniqueBanksCount.toLocaleString(),
+                    icon: <Building className="w-6 h-6" />,
+                    color: 'from-red-500 to-rose-600'
                   },
                   {
                     label: 'بازه زمانی (روز)',
-                    value: statistics.totalDays.toLocaleString()
+                    value: statistics.totalDays.toLocaleString(),
+                    icon: <Calendar className="w-6 h-6" />,
+                    color: 'from-teal-500 to-cyan-600'
                   },
                   {
                     label: 'بیشترین تراکنش روزانه',
-                    value: formatNumber(statistics.maxDailyAmount)
+                    value: formatNumber(statistics.maxDailyAmount),
+                    icon: <TrendingUp className="w-6 h-6" />,
+                    color: 'from-blue-500 to-indigo-600'
                   },
                   {
                     label: 'کمترین تراکنش روزانه',
-                    value: formatNumber(statistics.minDailyAmount)
+                    value: formatNumber(statistics.minDailyAmount),
+                    icon: <TrendingDown className="w-6 h-6" />,
+                    color: 'from-green-500 to-emerald-600'
                   },
                   {
                     label: 'میانگین تراکنش روزانه',
-                    value: formatNumber(Math.round(statistics.averageDailyAmount))
+                    value: formatNumber(Math.round(statistics.averageDailyAmount)),
+                    icon: <BarChart3 className="w-6 h-6" />,
+                    color: 'from-amber-500 to-yellow-600',
+                    textColor: 'text-black-800'
                   },
                   {
                     label: 'بیشترین مبلغ تراکنش',
-                    value: formatNumber(statistics.highestTransaction)
+                    value: formatNumber(statistics.highestTransaction),
+                    icon: <ArrowUp className="w-6 h-6" />,
+                    color: 'from-purple-500 to-violet-600'
                   },
                   {
                     label: 'کمترین مبلغ تراکنش',
-                    value: formatNumber(statistics.lowestTransaction)
+                    value: formatNumber(statistics.lowestTransaction),
+                    icon: <ArrowDown className="w-6 h-6" />,
+                    color: 'from-red-500 to-rose-600'
                   },
                   {
                     label: 'میانگین تعداد تراکنش روزانه',
-                    value: Math.round(statistics.averageTransactionsPerDay).toLocaleString()
+                    value: Math.round(statistics.averageTransactionsPerDay).toLocaleString(),
+                    icon: <PieChart className="w-6 h-6" />,
+                    color: 'from-teal-500 to-cyan-600'
                   }
-                  // ... other stats
                 ].map((stat, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`p-4 rounded-2xl ${
-                      isDarkMode ? 'bg-gray-800' : 'bg-white text-black'
-                    } shadow-lg hover:shadow-xl transition-all duration-300`}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                    whileHover={{ 
+                      scale: 1.03,
+                      transition: { duration: 0.2 }
+                    }}
+                    className={`p-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden relative
+                      ${isDarkMode ? 'bg-gray-800/80' : 'bg-white/90'}`}
                   >
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {stat.label}
+                    <div className="absolute inset-0 bg-gradient-to-br opacity-10 ${stat.color}"></div>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                        {stat.label}
+                      </div>
+                      <div className={`bg-gradient-to-r ${stat.color} p-2 rounded-lg text-white`}>
+                        {stat.icon}
+                      </div>
                     </div>
                     <div className="text-2xl font-bold mt-1">{stat.value}</div>
                   </motion.div>
                 ))}
               </div>
             )}
-
-              {/* Table Section */}
-              {transactions.length > 0 && (
-              <div className={`rounded-xl overflow-hidden shadow-lg ${
-                isDarkMode ? 'bg-gray-800' : 'bg-white text-black'
-              }`}>
-                <div className="overflow-x-auto">
-                <table className="w-full">
-                <thead>
-  <tr className="border-b border-gray-200 dark:border-gray-700">
-    <th className="p-2 text-right">
-      <button
-        onClick={() => handleSort('cardNumber')}
-        className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
-      >
-        {persianLabels.cardNumber}
-        <ArrowUpDown className="w-4 h-4" />
-      </button>
-    </th>
-    <th className="p-2 text-right">{persianLabels.bank}</th>
-    <th className="p-2 text-left">
-      <button
-        onClick={() => handleSort('amount')}
-        className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
-      >
-        مبلغ تراکنش (ریال)
-        <ArrowUpDown className="w-4 h-4" />
-      </button>
-    </th>
-    <th className="p-2 text-center">
-      <button
-        onClick={() => handleSort('repetitions')}
-        className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
-      >
-        {persianLabels.repetitions}
-        <ArrowUpDown className="w-4 h-4" />
-      </button>
-    </th>
-    <th className="p-2 text-center">
-      <button
-        onClick={() => handleSort('days')}
-        className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
-      >
-        {persianLabels.daysCount}
-        <ArrowUpDown className="w-4 h-4" />
-      </button>
-    </th>
-    <th className="p-2 text-center">
-      <button
-        onClick={() => handleSort('idealMode')}
-        className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
-      >
-        حالت ایده‌آل
-        <ArrowUpDown className="w-4 h-4" />
-      </button>
-    </th>
-    <th className="p-2 text-right">تاریخ تراکنش</th>
-  </tr>
-</thead>
-      <tbody>
-        {filteredAndSortedTransactions.map((t, index) => (
-          <motion.tr
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.07 }}
-            className={`border-b dark:border-gray-600 ${
-              isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'
-            }`}
-          >
-            <td className="p-2 text-right">{t.cardNumber}</td>
-            <td className="p-2 text-right">{t.bank.title}</td>
-            <td className="p-2 text-left" dir="ltr">
-              {typeof t.totalAmount === 'number' ? formatNumber(t.totalAmount) : t.totalAmount}
-            </td>
-            <td className="p-2 text-center">{t.repetitionCount}</td>
-            <td className="p-2 text-center">{t.daysCount}</td>
-            <td className="p-2 text-right">{t.uniqueDates.join('، ')}</td>
-          </motion.tr>
-        ))}
-      </tbody>
-    </table>
   
+            {/* Table Section */}
+            {transactions.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                className={`rounded-xl overflow-hidden shadow-lg ${
+                  isDarkMode ? 'bg-gray-800/90' : 'bg-white/90 text-black'
+                }`}
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <th className="p-4 text-right">
+                          <button
+                            onClick={() => handleSort('cardNumber')}
+                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
+                          >
+                            {persianLabels.cardNumber}
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
+                        </th>
+                        <th className="p-4 text-right">{persianLabels.bank}</th>
+                        <th className="p-4 text-left">
+                          <button
+                            onClick={() => handleSort('amount')}
+                            className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
+                          >
+                            مبلغ تراکنش (ریال)
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
+                        </th>
+                        <th className="p-4 text-center">
+                          <button
+                            onClick={() => handleSort('repetitions')}
+                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+                          >
+                            {persianLabels.repetitions}
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
+                        </th>
+                        <th className="p-4 text-center">
+                          <button
+                            onClick={() => handleSort('days')}
+                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+                          >
+                            {persianLabels.daysCount}
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
+                        </th>
+                        <th className="p-4 text-center">
+                          <button
+                            onClick={() => handleSort('idealMode')}
+                            className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+                          >
+                            حالت ایده‌آل
+                            <ArrowUpDown className="w-4 h-4" />
+                          </button>
+                        </th>
+                        <th className="p-4 text-right">تاریخ تراکنش</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAndSortedTransactions.map((t, index) => (
+                        <motion.tr
+                          key={index}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.05 * index }}
+                          whileHover={{ backgroundColor: isDarkMode ? 'rgba(75, 85, 99, 0.7)' : 'rgba(243, 244, 246, 0.7)' }}
+                          className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+                        >
+                          <td className="p-4 text-right">{t.cardNumber}</td>
+                          <td className="p-4 text-right">{t.bank.title}</td>
+                          <td className="p-4 text-left" dir="ltr">
+                            {typeof t.totalAmount === 'number' ? formatNumber(t.totalAmount) : t.totalAmount}
+                          </td>
+                          <td className="p-4 text-center">{t.repetitionCount}</td>
+                          <td className="p-4 text-center">{t.daysCount}</td>
+                          <td className="p-4 text-right">{t.uniqueDates.join('، ')}</td>
+                        </motion.tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
+              </motion.div>
             )}
           </CardContent>
+  
           <CardFooter
-            className={`px-6 py-3 text-xs border-t-0 rounded-b-3xl ${
-              isDarkMode ? 'text-gray-200' : 'text-gray-600 text-black'
+            className={`px-6 py-4 text-xs border-t ${
+              isDarkMode 
+                ? 'text-gray-200 border-gray-700/50' 
+                : 'text-gray-600 border-gray-200/50'
             }`}
             style={persianFontStyle}
           >
             <div className="w-full flex flex-col md:flex-row justify-between items-center gap-2">
-              <span className="md:text-sm text-center">
-All Right Reserved: Capt. Esmaeili              </span>
-              <span className="md:text-sm text-center"> CAPRICORN ©</span>
+              <motion.span 
+                className="md:text-sm text-center"
+                whileHover={{ scale: 1.05 }}
+              >
+                All Right Reserved: Capt. Esmaeili
+              </motion.span>
+              <motion.span 
+                className="md:text-sm text-center font-bold"
+                animate={{ 
+                  opacity: [0.7, 1, 0.7],
+                  scale: [1, 1.02, 1]
+                }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                CAPRICORN ©
+              </motion.span>
             </div>
           </CardFooter>
         </Card>
       </motion.div>
-
+  
       <QuickActionsMenu />
-      <ToastContainer position="bottom-center" />
+      <ToastContainer 
+        position="bottom-center" 
+        transition={motion.div}
+        draggable
+        limit={3}
+      />
     </div>
   );
 };
