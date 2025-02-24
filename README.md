@@ -6,13 +6,16 @@ A sophisticated React-based tool for analyzing Iranian bank card numbers and tra
 
 - 🏦 Comprehensive Iranian bank card identification system
 - 💳 Card number validation using Luhn algorithm
-- 📊 Transaction analysis with sorting and filtering capabilities
+- 📊 Advanced transaction analysis with sorting, filtering, and "Ideal Mode" scoring
 - 📱 Responsive design with dark/light mode support
 - 📋 Clipboard integration for easy data input
 - 📑 Excel export functionality
-- 🔍 Real-time search filtering
+- 🔍 Real-time search with advanced filtering (card number, bank, date range, amount)
 - 🎨 Modern UI with animations and transitions
 - 🏷️ Support for all major Iranian banks
+- -🇮🇷 Full Persian language support with RTL layout
+- 🖨️ Print functionality and data copying with formatted output
+- 📈 Detailed statistics including total transactions, amounts, daily averages, and more
 
 ## Getting Started
 
@@ -64,7 +67,16 @@ The application will open in your default browser at [http://localhost:3000](htt
 - shadcn/ui components
 - XLSX for Excel export functionality
 - Lucide React for icons
+- react-toastify for elegant notifications
 
+## Enhanced Features from Code
+
+- Ideal Mode Sorting: Combines repetition count, total amount, and days active into a normalized score
+- Comprehensive Statistics: Includes daily highs/lows, unique banks, and average transactions
+- Advanced Filtering: Filter by card number, bank name, date range, and amount range
+- Visual Feedback: Animated loading states, success dialogs, and hover effects
+- Persian Typography: Uses IRANSans font with RTL support
+  
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
