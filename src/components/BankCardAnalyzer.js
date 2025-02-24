@@ -217,41 +217,67 @@ const statistics = useMemo(() => {
   };
 }, [transactions]);
 
-  const filteredAndSortedTransactions = useMemo(() => {
-    let filtered = [...transactions];
-    if (amountFilter.min || amountFilter.max) {
-      filtered = filtered.filter((t) => {
-        if (typeof t.totalAmount !== 'number') return false;
-        const min = amountFilter.min ? parseFloat(amountFilter.min) : -Infinity;
-        const max = amountFilter.max ? parseFloat(amountFilter.max) : Infinity;
-        return t.totalAmount >= min && t.totalAmount <= max;
-      });
-    }
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (t) => t.cardNumber.includes(searchTerm.replace(/\D/g, '')) || t.bank.title.includes(searchTerm)
-      );
-    }
-    return filtered.sort((a, b) => {
-      const modifier = sortConfig.direction === 'asc' ? 1 : -1;
-      switch (sortConfig.key) {
-        case 'cardNumber':
-          return modifier * a.cardNumber.localeCompare(b.cardNumber);
-        case 'amount':
-          if (a.totalAmount === 'No price' && b.totalAmount === 'No price') return 0;
-          if (a.totalAmount === 'No price') return 1;
-          if (b.totalAmount === 'No price') return -1;
-          return modifier * (a.totalAmount - b.totalAmount);
-        case 'repetitions':
-          return modifier * (a.repetitionCount - b.repetitionCount);
-        case 'days':
-          return modifier * (a.daysCount - b.daysCount);
-        default:
-          return 0;
-      }
-    });
-  }, [transactions, sortConfig, searchTerm, amountFilter]);
+ // Update filteredAndSortedTransactions to handle ideal mode
+const filteredAndSortedTransactions = useMemo(() => {
+  let filtered = [...transactions];
 
+  // Apply existing filters
+  if (amountFilter.min || amountFilter.max) {
+    filtered = filtered.filter((t) => {
+      if (typeof t.totalAmount !== 'number') return false;
+      const min = amountFilter.min ? parseFloat(amountFilter.min) : -Infinity;
+      const max = amountFilter.max ? parseFloat(amountFilter.max) : Infinity;
+      return t.totalAmount >= min && t.totalAmount <= max;
+    });
+  }
+  if (searchTerm) {
+    filtered = filtered.filter(
+      (t) => t.cardNumber.includes(searchTerm.replace(/\D/g, '')) || t.bank.title.includes(searchTerm)
+    );
+  }
+
+  // Sort logic
+  if (sortConfig.idealMode) {
+    // Calculate max values for normalization
+    const maxRepetitions = Math.max(...filtered.map(t => t.repetitionCount));
+    const maxAmount = Math.max(...filtered.map(t => typeof t.totalAmount === 'number' ? t.totalAmount : 0));
+    const maxDays = Math.max(...filtered.map(t => t.daysCount));
+
+    return filtered.sort((a, b) => {
+      const aRepNorm = a.repetitionCount / maxRepetitions;
+      const bRepNorm = b.repetitionCount / maxRepetitions;
+      const aAmtNorm = (typeof a.totalAmount === 'number' ? a.totalAmount : 0) / maxAmount;
+      const bAmtNorm = (typeof b.totalAmount === 'number' ? b.totalAmount : 0) / maxAmount;
+      const aDaysNorm = a.daysCount / maxDays;
+      const bDaysNorm = b.daysCount / maxDays;
+
+      // Higher score = higher repetitions + amount, lower days
+      const aScore = aRepNorm + aAmtNorm - aDaysNorm;
+      const bScore = bRepNorm + bAmtNorm - bDaysNorm;
+
+      return sortConfig.direction === 'desc' ? bScore - aScore : aScore - bScore;
+    });
+  }
+
+  return filtered.sort((a, b) => {
+    const modifier = sortConfig.direction === 'asc' ? 1 : -1;
+    switch (sortConfig.key) {
+      case 'cardNumber':
+        return modifier * a.cardNumber.localeCompare(b.cardNumber);
+      case 'amount':
+        if (a.totalAmount === 'No price' && b.totalAmount === 'No price') return 0;
+        if (a.totalAmount === 'No price') return 1;
+        if (b.totalAmount === 'No price') return -1;
+        return modifier * (a.totalAmount - b.totalAmount);
+      case 'repetitions':
+        return modifier * (a.repetitionCount - b.repetitionCount);
+      case 'days':
+        return modifier * (a.daysCount - b.daysCount);
+      default:
+        return 0;
+    }
+  });
+}, [transactions, sortConfig, searchTerm, amountFilter]);
   const copyFormattedData = async () => {
     try {
       const formattedData = filteredAndSortedTransactions
@@ -318,12 +344,12 @@ const statistics = useMemo(() => {
   }, []);
 
   const extractCardAmountAndDate = useCallback((line) => {
-    // 1. Clean the line (remove non-printable characters, tabs, etc.)
+    // Clean the line: remove invisible characters, normalize spaces
     const cleanLine = line
       .trim()
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .replace(/\t+/g, ' ')
-      .replace(/\s+/g, ' ');
+      .replace(/\s+/g, ' ')
+      .replace(/[ـ]/g, ''); // Remove Persian kashida if present
   
     if (!cleanLine) return null;
   
@@ -331,43 +357,54 @@ const statistics = useMemo(() => {
     let amount = null;
     let date = null;
   
-    // 2. Extract components by splitting only on spaces or tabs
+    // Split by spaces
     const parts = cleanLine.split(/\s+/);
   
-    // 3. Extract date from the first column
-    if (parts.length > 0) {
-      date = parts[0]; // Assuming the first part is always the date
-    }
+    // Regular expressions for detection
+    const cardNumberRegex = /^\d{16}$/; // 16-digit card number
+    const persianDateRegex = /^\d{4}\/\d{2}\/\d{2}$/; // e.g., 1403/11/05
+    const amountRegex = /^\d+(?:,\d{3})*(?:\.\d+)?$/; // e.g., 1,000,000 or 1000
   
-    // 4. Extract amount by finding the first valid number with commas
-    for (const part of parts) {
-      const numberMatch = part.match(/^\d{1,3}(?:,\d{3})*$/); // Matches numbers with thousands separators
-      if (numberMatch) {
-        amount = parseInt(numberMatch[0].replace(/,/g, ''), 10);
-        break; // Stop after finding the first valid amount
-      }
-    }
+    // Identify components
+    parts.forEach((part) => {
+      const cleanPart = part.replace(/[^\d\/]/g, ''); // Remove non-digits except slashes for dates
   
-    // 5. Extract the card number by finding the last valid 16-digit number
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const cleanPart = parts[i].replace(/\D/g, ''); // Remove non-digits
-      if (cleanPart.length === 16) {
+      // Card number: must be 16 digits
+      if (cardNumberRegex.test(cleanPart)) {
         cardNumber = cleanPart;
-        break;
+      }
+      // Date: must match Persian date format
+      else if (persianDateRegex.test(part)) {
+        date = part;
+      }
+      // Amount: must be a valid number (allowing commas)
+      else if (amountRegex.test(part)) {
+        amount = parseInt(part.replace(/,/g, ''), 10);
+      }
+    });
+  
+    // Additional logic to handle cases where order might differ
+    if (!cardNumber) {
+      // Look for the last 16-digit sequence in the line
+      const digitsOnly = cleanLine.replace(/\D/g, '');
+      if (digitsOnly.length >= 16) {
+        cardNumber = digitsOnly.slice(-16); // Take the last 16 digits
       }
     }
   
-    // 6. Ignore entries where the amount or card number is 0
-    if (!cardNumber || amount === 0) {
-      return null;
+    // Validation
+    if (!cardNumber || !validateCardNumber(cardNumber)) {
+      return null; // Invalid or missing card number
+    }
+    if (!date || !persianDateRegex.test(date)) {
+      date = 'Unknown'; // Default if date is missing or invalid
+    }
+    if (amount === null || isNaN(amount)) {
+      amount = 0; // Default to 0 if no amount is found, instead of skipping
     }
   
-    return {
-      cardNumber,
-      amount,
-      date
-    };
-  }, []);
+    return { cardNumber, amount, date };
+  }, [validateCardNumber]);
   
 
   const analyzeData = useCallback(async () => {
@@ -425,12 +462,22 @@ const statistics = useMemo(() => {
     setSearchTerm('');
   };
 
-  const handleSort = (key) => {
+// New sorting function including ideal mode
+const handleSort = (key) => {
+  if (key === 'idealMode') {
+    setSortConfig({
+      key: 'idealMode',
+      direction: 'desc', // Always sort descending for ideal mode
+      idealMode: true
+    });
+  } else {
     setSortConfig({
       key,
-      direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'
+      direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc',
+      idealMode: false
     });
-  };
+  }
+};
 
   const sortedTransactions = useMemo(() => {
     const filtered = searchTerm
@@ -842,48 +889,57 @@ const statistics = useMemo(() => {
               }`}>
                 <div className="overflow-x-auto">
                 <table className="w-full">
-      <thead>
-        <tr className="border-b border-gray-200 dark:border-gray-700">
-          <th className="p-2 text-right">
-            <button
-              onClick={() => handleSort('cardNumber')}
-              className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
-            >
-              {persianLabels.cardNumber}
-              <ArrowUpDown className="w-4 h-4" />
-            </button>
-          </th>
-          <th className="p-2 text-right">{persianLabels.bank}</th>
-          <th className="p-2 text-left">
-            <button
-              onClick={() => handleSort('amount')}
-              className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
-            >
-              مبلغ تراکنش (ریال)
-              <ArrowUpDown className="w-4 h-4" />
-            </button>
-          </th>
-          <th className="p-2 text-center">
-            <button
-              onClick={() => handleSort('repetitions')}
-              className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
-            >
-              {persianLabels.repetitions}
-              <ArrowUpDown className="w-4 h-4" />
-            </button>
-          </th>
-          <th className="p-2 text-center">
-            <button
-              onClick={() => handleSort('days')}
-              className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
-            >
-              {persianLabels.daysCount}
-              <ArrowUpDown className="w-4 h-4" />
-            </button>
-          </th>
-          <th className="p-2 text-right">تاریخ تراکنش</th>
-        </tr>
-      </thead>
+                <thead>
+  <tr className="border-b border-gray-200 dark:border-gray-700">
+    <th className="p-2 text-right">
+      <button
+        onClick={() => handleSort('cardNumber')}
+        className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
+      >
+        {persianLabels.cardNumber}
+        <ArrowUpDown className="w-4 h-4" />
+      </button>
+    </th>
+    <th className="p-2 text-right">{persianLabels.bank}</th>
+    <th className="p-2 text-left">
+      <button
+        onClick={() => handleSort('amount')}
+        className="flex items-center gap-1 w-full justify-end hover:text-blue-500 transition-colors"
+      >
+        مبلغ تراکنش (ریال)
+        <ArrowUpDown className="w-4 h-4" />
+      </button>
+    </th>
+    <th className="p-2 text-center">
+      <button
+        onClick={() => handleSort('repetitions')}
+        className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+      >
+        {persianLabels.repetitions}
+        <ArrowUpDown className="w-4 h-4" />
+      </button>
+    </th>
+    <th className="p-2 text-center">
+      <button
+        onClick={() => handleSort('days')}
+        className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+      >
+        {persianLabels.daysCount}
+        <ArrowUpDown className="w-4 h-4" />
+      </button>
+    </th>
+    <th className="p-2 text-center">
+      <button
+        onClick={() => handleSort('idealMode')}
+        className="flex items-center gap-1 w-full justify-center hover:text-blue-500 transition-colors"
+      >
+        حالت ایده‌آل
+        <ArrowUpDown className="w-4 h-4" />
+      </button>
+    </th>
+    <th className="p-2 text-right">تاریخ تراکنش</th>
+  </tr>
+</thead>
       <tbody>
         {filteredAndSortedTransactions.map((t, index) => (
           <motion.tr
@@ -921,7 +977,7 @@ const statistics = useMemo(() => {
             <div className="w-full flex flex-col md:flex-row justify-between items-center gap-2">
               <span className="md:text-sm text-center">
 All Right Reserved: Capt. Esmaeili              </span>
-              <span className="md:text-sm text-center">💗 Made With </span>
+              <span className="md:text-sm text-center"> CAPRICORN ©</span>
             </div>
           </CardFooter>
         </Card>
