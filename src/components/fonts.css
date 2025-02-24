@@ -1,0 +1,31 @@
+/* fonts.css */
+
+/* Define the IRANSans font */
+@font-face {
+    font-family: 'IRANSans';
+    src: url('https://github.com/9231058/BozorgOn/blob/master/fonts/IRANSans-web.woff') format('woff2'),
+         url('https://github.com/9231058/BozorgOn/blob/master/fonts/IRANSans-web.woff2') format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  /* Fallback for bold weights if needed */
+  @font-face {
+    font-family: 'IRANSans';
+    src: url('https://github.com/9231058/BozorgOn/blob/master/fonts/IRANSans-Bold-web.woff2') format('woff2'),
+         url('https://github.com/9231058/BozorgOn/blob/master/fonts/IRANSans-Bold-web.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+  }
+  
+  /* Ensure text direction and font family for Persian */
+  body {
+    font-family: 'IRANSans', 'Tahoma', sans-serif;
+    direction: rtl;
+  }
+  
+  /* Optional: Adjust font rendering for better clarity */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }

@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
   AlertDialogAction
 } from '@/components/ui/alert-dialog';
+import './fonts.css';
 
 // Bank database constant
 const BANK_DATABASE = [
@@ -202,7 +203,7 @@ const BankCardAnalyzer = () => {
  const colorScheme = {
   bg: isDarkMode ? 'bg-gray-900' : 'bg-gray-50 text-black',
   card: isDarkMode ? 'bg-gray-800' : 'bg-white',
-  text: isDarkMode ? 'text-gray-200' : 'text-gray-800',
+  text: isDarkMode ? 'text-gray-200' : 'text-gray-900', // Darker text in light mode
   input: isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-200',
   hover: isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100',
   button: isDarkMode ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-500 hover:bg-purple-600',
@@ -512,7 +513,25 @@ const handleSort = (key) => {
     });
   }
 };
-
+const exportToCSV = () => {
+  const csvContent = filteredAndSortedTransactions.map(t => 
+    `${t.cardNumber},${t.bank.title},${t.totalAmount},${t.repetitionCount},${t.daysCount},${t.uniqueDates.join(';')}`
+  ).join('\n');
+  const blob = new Blob([`\ufeff${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'bank_analysis.csv';
+  link.click();
+};
+// Elegant Icon Suggestion
+const IconSuggestion = () => (
+  <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="40" height="40" rx="8" fill={isDarkMode ? "#4B5EAA" : "#D1C4E9"} />
+    <path d="M12 28H28V12H12V28ZM14 14H26V26H14V14Z" fill={isDarkMode ? "#A5B4FC" : "#9575CD"} />
+    <path d="M18 18H22V22H18V18Z" fill={isDarkMode ? "#E0E7FF" : "#B39DDB"} />
+    <circle cx="20" cy="20" r="2" fill={isDarkMode ? "#6366F1" : "#7E57C2"} />
+  </svg>
+);
   const sortedTransactions = useMemo(() => {
     const filtered = searchTerm
       ? transactions.filter((t) => t.cardNumber.includes(searchTerm.replace(/\D/g, '')))
@@ -935,7 +954,8 @@ const handleSort = (key) => {
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                <CardTitle className="text-3xl font-bold text-white">
+                <CardTitle className={`${colorScheme.text} flex items-center gap-2`}>
+                <IconSuggestion />
                   {persianLabels.title}
                 </CardTitle>
               </motion.div>
@@ -1132,7 +1152,8 @@ const handleSort = (key) => {
                     label: 'کمترین مبلغ تراکنش',
                     value: formatNumber(statistics.lowestTransaction),
                     icon: <ArrowDown className="w-6 h-6" />,
-                    color: 'from-red-500 to-rose-600'
+                    color: 'from-red-500 to-rose-600',
+                    
                   },
                   {
                     label: 'میانگین تعداد تراکنش روزانه',
