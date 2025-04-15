@@ -558,7 +558,7 @@ const IconSuggestion = () => (
 
   const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
-    const data = sortedTransactions.map((t, index) => ({
+    const data = filteredAndSortedTransactions.map((t, index) => ({
       ردیف: index + 1,
       'شماره کارت': t.cardNumber,
       'تعداد تراکنش‌ها': t.repetitionCount,
@@ -1253,7 +1253,7 @@ const IconSuggestion = () => (
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAndSortedTransactions.map((t, index) => (
+                      {filteredAnd fielTransactions.map((t, index) => (
                         <motion.tr
                           key={index}
                           initial={{ opacity: 0, y: 5 }}
