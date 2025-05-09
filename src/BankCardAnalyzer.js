@@ -1,19 +1,17 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Moon, Sun, ClipboardCopy, ClipboardPaste, Trash2, RefreshCcw } from 'lucide-react';
+import { ClipboardCopy, ClipboardPaste, Trash2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
   AlertDialog, 
   AlertDialogAction, 
-  AlertDialogCancel, 
   AlertDialogContent, 
   AlertDialogDescription, 
   AlertDialogFooter, 
   AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogTrigger 
+  AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 
 // Expanded Bank Database with more banks
@@ -64,7 +62,6 @@ const BankCardAnalyzer = () => {
   const [sortedRepetitions, setSortedRepetitions] = useState([]);
   const [sortOrder, setSortOrder] = useState('desc');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [showButtons, setShowButtons] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
@@ -97,11 +94,8 @@ const BankCardAnalyzer = () => {
         .map(([number, data]) => `${number} - ${data.bank.title || data.bank.name}`)
         .join('\n');
 
-      const bankRepetitions = Object.entries(repetitions).reduce((acc, [, data]) => {
-        acc[data.bank.name] = (acc[data.bank.name] || 0) + data.count;
-        return acc;
-      }, {});
-
+      const bankRepetitions = calculateBankSummary();
+      
       const summary = Object.entries(bankRepetitions)
         .map(([bank, count]) => `${bank}: ${count} time(s)`)
         .join('\n');
@@ -112,6 +106,15 @@ const BankCardAnalyzer = () => {
     }
   };
 
+  // Calculate bank summary correctly
+  const calculateBankSummary = () => {
+    return sortedRepetitions.reduce((acc, [_, data]) => {
+      const bankName = data.bank.title || data.bank.name;
+      acc[bankName] = (acc[bankName] || 0) + data.count;
+      return acc;
+    }, {});
+  };
+
   const exportToExcel = () => {
     try {
       const cardNumberData = sortedRepetitions.map(([number, data]) => ({
@@ -120,7 +123,8 @@ const BankCardAnalyzer = () => {
         'Count': data.count
       }));
   
-      const bankSummaryData = Object.entries(bankRepetitions).map(([bank, count]) => ({
+      const bankSummary = calculateBankSummary();
+      const bankSummaryData = Object.entries(bankSummary).map(([bank, count]) => ({
         'Bank Name': bank,
         'Total Count': count
       }));
@@ -133,9 +137,11 @@ const BankCardAnalyzer = () => {
       const summaryWorksheet = XLSX.utils.json_to_sheet(bankSummaryData);
       XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "Bank Summary");
   
-      XLSX.writeFile(workbook, "bank_card_analysis.xlsx");
+      XLSX.writeFile(workbook, "تحلیل.xlsx");
     } catch (error) {
       console.error('Failed to export to Excel:', error);
+      setErrorMessage('خطا در خروجی اکسل. لطفا دوباره تلاش کنید.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -184,14 +190,14 @@ const BankCardAnalyzer = () => {
 
     // Check if no valid numbers found
     if (numbers.length === 0) {
-      setErrorMessage('No valid card numbers found. Please enter valid card numbers.');
+      setErrorMessage('شماره کارت معتبری یافت نشد. لطفا شماره کارت های معتبر وارد کنید.');
       setShowErrorDialog(true);
       return;
     }
 
     const invalidNumbers = numbers.filter(num => !validateCardNumber(num));
     if (invalidNumbers.length > 0) {
-      setValidationError(`Invalid card numbers: ${invalidNumbers.join(', ')}`);
+      setValidationError(`شماره کارت های نامعتبر: ${invalidNumbers.join(', ')}`);
       return;
     }
 
@@ -219,10 +225,6 @@ const BankCardAnalyzer = () => {
     setSortedRepetitions(prev => [...prev].reverse());
   }, []);
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
   // Filtered repetitions based on search term
   const filteredRepetitions = searchTerm
     ? sortedRepetitions.filter(([number]) => 
@@ -230,31 +232,22 @@ const BankCardAnalyzer = () => {
       )
     : sortedRepetitions;
 
-  // Bank Repetition Summary
-  const bankRepetitions = Object.entries(repetitions).reduce((acc, [, data]) => {
-    acc[data.bank.name] = (acc[data.bank.name] || 0) + data.count;
-    return acc;
-  }, {});
+  // Bank Repetition Summary (calculated correctly when needed)
+  const bankRepetitionsSummary = calculateBankSummary();
 
   return (
-    <div 
-      className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${
-        isDarkMode 
-          ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white' 
-          : 'bg-gradient-to-br from-blue-50 to-indigo-100'
-      }`}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 transition-colors duration-300 bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Error Dialog */}
       <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
-        <AlertDialogContent className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white'}`}>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Input Error</AlertDialogTitle>
-            <AlertDialogDescription className={isDarkMode ? 'text-gray-300' : ''}>
+            <AlertDialogTitle>خطا</AlertDialogTitle>
+            <AlertDialogDescription>
               {errorMessage}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction>Understood</AlertDialogAction>
+            <AlertDialogAction>متوجه شدم</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -265,61 +258,39 @@ const BankCardAnalyzer = () => {
         transition={{ duration: 0.6 }}
         className="w-full max-w-3xl"
       >
-        <Card 
-          className={`shadow-2xl hover:shadow-3xl transition-shadow duration-300 ${
-            isDarkMode ? 'bg-gray-800 border-gray-700' : ''
-          }`}
-        >
-          <CardHeader 
-            className={`${
-              isDarkMode 
-                ? 'bg-gradient-to-r from-gray-700 to-gray-600' 
-                : 'bg-gradient-to-r from-blue-500 to-indigo-600'
-            } text-white flex justify-between items-center`}
-          >
+        <Card className="shadow-2xl hover:shadow-3xl transition-shadow duration-300">
+          <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">
-              Bank Card Number Analyzer
+              تحلیلگر شماره کارت بانکی
             </CardTitle>
-            <motion.button 
-              onClick={toggleDarkMode}
-              whileHover={{ rotate: 360 }}
-              transition={{ duration: 0.5 }}
-              className="focus:outline-none"
-            >
-              {isDarkMode ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
-            </motion.button>
           </CardHeader>
 
           <CardContent className="space-y-4 p-6">
             {/* Top Button Section */}
             <div className="flex flex-wrap gap-4 mb-4 justify-center">
               <Button onClick={analyzeCardNumbers} className="bg-green-500 hover:bg-green-600">
-                Analyze
+                تحلیل
               </Button>
               <Button onClick={handleCopy} className="bg-blue-500 hover:bg-blue-600">
-                <ClipboardCopy className="mr-2" /> Copy Results
+                <ClipboardCopy className="mr-2" /> کپی نتایج
               </Button>
               <Button onClick={exportToExcel} className="bg-purple-500 hover:bg-purple-600">
-                Export to Excel
+                خروجی اکسل
               </Button>
               <Button onClick={toggleSortOrder} className="bg-gray-500 hover:bg-gray-600">
-                Sort: {sortOrder === 'desc' ? 'Descending' : 'Ascending'}
+                مرتب‌سازی: {sortOrder === 'desc' ? 'نزولی' : 'صعودی'}
               </Button>
               <Button onClick={handlePaste} className="bg-teal-500 hover:bg-teal-600 flex items-center">
-                <ClipboardPaste className="mr-2" /> Paste
+                <ClipboardPaste className="mr-2" /> چسباندن
               </Button>
               <Button onClick={handleReset} className="bg-red-500 hover:bg-red-600 flex items-center">
-                <Trash2 className="mr-2" /> Reset
+                <Trash2 className="mr-2" /> پاک کردن
               </Button>
             </div>
 
             <textarea 
-              className={`w-full min-h-[200px] p-3 border-2 rounded-lg transition duration-200 ${
-                isDarkMode 
-                  ? 'bg-gray-700 border-gray-600 text-white' 
-                  : 'border-blue-200 focus:ring-2 focus:ring-blue-500'
-              }`}
-              placeholder="Enter bank card numbers (one per line or comma-separated)"
+              className="w-full min-h-[200px] p-3 border-2 rounded-lg transition duration-200 border-blue-200 focus:ring-2 focus:ring-blue-500"
+              placeholder="شماره کارت‌های بانکی را وارد کنید (هر شماره در یک خط یا با کاما جدا شده)"
               value={cardNumbers}
               onChange={(e) => {
                 // Allow only numbers, newlines, and commas
@@ -342,32 +313,24 @@ const BankCardAnalyzer = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <input 
                 type="text" 
-                placeholder="Search card numbers"
+                placeholder="جستجوی شماره کارت"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full p-2 border rounded-lg transition ${
-                  isDarkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white' 
-                    : 'border-blue-200 focus:ring-2 focus:ring-blue-500'
-                }`}
+                className="w-full p-2 border rounded-lg transition border-blue-200 focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <AnimatePresence>
               {Object.keys(repetitions).length > 0 && !isAnalyzing && (
                 <motion.div 
-                  className={`${
-                    isDarkMode 
-                      ? 'bg-gray-700 border border-gray-600' 
-                      : 'bg-white shadow-md'
-                  } rounded-lg p-4 mt-4`}
+                  className="bg-white shadow-md rounded-lg p-4 mt-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 20 }}
                   transition={{ duration: 0.3 }}
                 >
                   <h2 className="text-lg font-semibold mb-2">
-                    Analysis Results
+                    نتایج تحلیل
                   </h2>
                   <ul className="space-y-2">
                     {filteredRepetitions.map(([number, data]) => (
@@ -378,7 +341,7 @@ const BankCardAnalyzer = () => {
                         <span>
                           <strong>{number}</strong> - {data.bank.title || data.bank.name}
                         </span>
-                        <span>{data.count} time(s)</span>
+                        <span>{data.count} بار</span>
                       </li>
                     ))}
                   </ul>
@@ -393,29 +356,25 @@ const BankCardAnalyzer = () => {
                 transition={{ duration: 0.5 }}
                 className="text-center"
               >
-                Analyzing card numbers...
+                در حال تحلیل شماره کارت‌ها...
               </motion.div>
             )}
 
-            {Object.keys(bankRepetitions).length > 0 && !isAnalyzing && (
+            {Object.keys(bankRepetitionsSummary).length > 0 && !isAnalyzing && (
               <motion.div
-                className={`${
-                  isDarkMode
-                    ? 'bg-gray-700 border border-gray-600'
-                    : 'bg-white shadow-md'
-                } rounded-lg p-4 mt-4`}
+                className="bg-white shadow-md rounded-lg p-4 mt-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3 }}
               >
                 <h2 className="text-lg font-semibold mb-2">
-                  Bank Summary
+                  خلاصه بانک‌ها
                 </h2>
                 <ul className="space-y-2">
-                  {Object.entries(bankRepetitions).map(([bank, count]) => (
+                  {Object.entries(bankRepetitionsSummary).map(([bank, count]) => (
                     <li key={bank} className="text-sm">
-                      {bank}: {count} time(s)
+                      {bank}: {count} بار
                     </li>
                   ))}
                 </ul>
@@ -428,25 +387,25 @@ const BankCardAnalyzer = () => {
               onClick={analyzeCardNumbers}
               className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition"
             >
-              Analyze
+              تحلیل
             </Button>
             <Button
               onClick={handleCopy}
               className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
             >
-              Copy Results
+              کپی نتایج
             </Button>
             <Button
               onClick={exportToExcel}
               className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition"
             >
-              Export to Excel
+              خروجی اکسل
             </Button>
             <Button
               onClick={toggleSortOrder}
               className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition"
             >
-              Sort: {sortOrder === 'desc' ? 'Descending' : 'Ascending'}
+              مرتب‌سازی: {sortOrder === 'desc' ? 'نزولی' : 'صعودی'}
             </Button>
           </CardFooter>
         </Card>
