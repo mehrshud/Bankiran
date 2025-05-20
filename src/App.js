@@ -3,6 +3,7 @@ import LoginPage from './components/LoginPage';
 import BankCardAnalyzer from './components/BankCardAnalyzer';
 import ProfileManager from './components/ProfileManager';
 
+
 const App = () => {
   // Initialize dark mode to true by default
   const [isDarkMode, setIsDarkMode] = useState(() => {

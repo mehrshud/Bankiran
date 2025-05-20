@@ -556,19 +556,20 @@ const IconSuggestion = () => (
     });
   }, [transactions, sortConfig, searchTerm]);
 
-  const exportToExcel = () => {
+   const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
-    const data = filteredAndSortedTransactions.map((t, index) => ({
+    const data = sortedTransactions.map((t, index) => ({
       ردیف: index + 1,
       'شماره کارت': t.cardNumber,
       'تعداد تراکنش‌ها': t.repetitionCount,
       'تعداد روزهای فعالیت': t.daysCount,
-      'مجموع مبلغ': typeof t.totalAmount === 'number' ? t.totalAmount : 0
+      'مجموع مبلغ': typeof t.totalAmount === 'number' ? t.totalAmount : 0,
+      'حالت ایده آل': t.repetitionCount > 10 && t.daysCount > 5 ? 'بله' : 'خیر'
     }));
     const sheet = XLSX.utils.json_to_sheet(data, {
-      header: ['ردیف', 'شماره کارت', 'تعداد تراکنش‌ها', 'تعداد روزهای فعالیت', 'مجموع مبلغ']
+      header: ['ردیف', 'شماره کارت', 'تعداد تراکنش‌ها', 'تعداد روزهای فعالیت', 'مجموع مبلغ', 'حالت ایده آل']
     });
-    const colWidths = [{ wch: 8 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
+    const colWidths = [{ wch: 8 }, { wch: 20 }, { wch: 15 }, { wch: 20 }, { wch: 15 }, { wch: 15 }];
     sheet['!cols'] = colWidths;
     const range = XLSX.utils.decode_range(sheet['!ref']);
     for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -588,9 +589,9 @@ const IconSuggestion = () => (
         };
       }
     }
-    sheet['!dir'] = 'rtl';
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Analysis');
-    XLSX.writeFile(workbook, 'bank_analysis.xlsx');
+     sheet['!dir'] = 'rtl';
+    XLSX.utils.book_append_sheet(workbook, sheet, 'تحلیل');
+    XLSX.writeFile(workbook, 'تحلیل.xlsx');
   };
 
   const SearchBar = () => (
@@ -701,13 +702,13 @@ const IconSuggestion = () => (
   }, [transactions, searchFilters]);
 
   return (
-    <div
-      className={`min-h-screen flex items-center justify-center p-4 md:p-8 transition-all duration-700 ${
-        isDarkMode
-          ? 'bg-gradient-to-br from-gray-900 via-purple-950 to-indigo-900'
-          : 'bg-gradient-to-br from-violet-50 via-fuchsia-50 to-indigo-50'
-      }`}
-      style={persianFontStyle}
+  <div
+    className={`min-h-screen flex items-center justify-center p-8 transition-colors ${
+      isDarkMode
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'
+        : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 text-gray-800'
+    }`}
+    style={persianFontStyle}
     >
       {/* Loading Dialog with improved animation */}
       <AlertDialog open={isAnalyzing}>
@@ -1252,27 +1253,32 @@ const IconSuggestion = () => (
                         <th className="p-4 text-right">تاریخ تراکنش</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {filteredAnd fielTransactions.map((t, index) => (
-                        <motion.tr
-                          key={index}
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.05 * index }}
-                          whileHover={{ backgroundColor: isDarkMode ? 'rgba(75, 85, 99, 0.7)' : 'rgba(243, 244, 246, 0.7)' }}
-                          className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
-                        >
-                          <td className="p-4 text-right">{t.cardNumber}</td>
-                          <td className="p-4 text-right">{t.bank.title}</td>
-                          <td className="p-4 text-left" dir="ltr">
-                            {typeof t.totalAmount === 'number' ? formatNumber(t.totalAmount) : t.totalAmount}
-                          </td>
-                          <td className="p-4 text-center">{t.repetitionCount}</td>
-                          <td className="p-4 text-center">{t.daysCount}</td>
-                          <td className="p-4 text-right">{t.uniqueDates.join('، ')}</td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
+  {filteredAndSortedTransactions.map((t, index) => (
+    <motion.tr
+      key={index}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.07 }}
+      className={`border-b dark:border-gray-600 ${
+        isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'
+      }`}
+    >
+      <td className="p-2 text-right">{t.cardNumber}</td>
+      <td className="p-2 text-right">{t.bank.title}</td>
+      <td className="p-2 text-left">
+        {typeof t.totalAmount === 'number'
+          ? t.totalAmount.toLocaleString()
+          : t.totalAmount}
+      </td>
+      <td className="p-2 text-center">{t.repetitionCount}</td>
+      <td className="p-2 text-center">{t.daysCount}</td>
+      <td className="p-2 text-right" dir="ltr">
+        {t.uniqueDates.join(', ')}
+      </td>
+    </motion.tr>
+  ))}
+</tbody>
                   </table>
                 </div>
               </motion.div>

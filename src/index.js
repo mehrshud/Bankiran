@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import './styles/global.css';
+import 'react-toastify/dist/ReactToastify.css';
 // Remove or comment out reportWebVitals
 // import reportWebVitals from './reportWebVitals';
 
