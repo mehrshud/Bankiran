@@ -703,40 +703,14 @@ const IconSuggestion = () => (
   }, [transactions, searchFilters]);
 
   return (
-<div
-      className={`min-h-screen transition-all duration-700 ${
-        isDarkMode
-          ? 'bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900'
-          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
-      }`}
-      style={persianFontStyle}
+  <div
+    className={`min-h-screen flex items-center justify-center p-8 transition-colors ${
+      isDarkMode
+        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'
+        : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 text-gray-800'
+    }`}
+    style={persianFontStyle}
     >
-      {/* Enhanced floating particles background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className={`absolute w-2 h-2 rounded-full ${
-              isDarkMode ? 'bg-purple-400/30' : 'bg-indigo-400/20'
-            }`}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [0, -100, 0],
-              x: [0, Math.random() * 100 - 50, 0],
-              opacity: [0, 1, 0],
-            }}
-            transition={{
-              duration: Math.random() * 10 + 10,
-              repeat: Infinity,
-              delay: Math.random() * 5,
-            }}
-          />
-        ))}
-      </div>
-
       {/* Loading Dialog with improved animation */}
       <AlertDialog open={isAnalyzing}>
         <AlertDialogContent className="bg-gradient-to-br from-violet-600 to-indigo-600 border-0 text-white overflow-hidden p-8 rounded-2xl shadow-xl">
