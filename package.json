@@ -1,6 +1,6 @@
 {
   "name": "bankiran",
-  "version": "1.2.5",
+  "version": "2.2.5",
   "private": true,
   "dependencies": {
     "@headlessui/react": "^2.2.0",

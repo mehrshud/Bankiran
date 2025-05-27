@@ -231,6 +231,7 @@ const statistics = useMemo(() => {
   const maxDailyAmount = Math.max(...dailyAmountValues);
   const minDailyAmount = Math.min(...dailyAmountValues);
   const avgDailyAmount = dailyAmountValues.reduce((a, b) => a + b, 0) / dailyAmountValues.length;
+  
 
   return {
     totalTransactions: transactions.reduce((sum, t) => sum + t.repetitionCount, 0),
@@ -702,14 +703,40 @@ const IconSuggestion = () => (
   }, [transactions, searchFilters]);
 
   return (
-  <div
-    className={`min-h-screen flex items-center justify-center p-8 transition-colors ${
-      isDarkMode
-        ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'
-        : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 text-gray-800'
-    }`}
-    style={persianFontStyle}
+<div
+      className={`min-h-screen transition-all duration-700 ${
+        isDarkMode
+          ? 'bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900'
+          : 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50'
+      }`}
+      style={persianFontStyle}
     >
+      {/* Enhanced floating particles background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className={`absolute w-2 h-2 rounded-full ${
+              isDarkMode ? 'bg-purple-400/30' : 'bg-indigo-400/20'
+            }`}
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -100, 0],
+              x: [0, Math.random() * 100 - 50, 0],
+              opacity: [0, 1, 0],
+            }}
+            transition={{
+              duration: Math.random() * 10 + 10,
+              repeat: Infinity,
+              delay: Math.random() * 5,
+            }}
+          />
+        ))}
+      </div>
+
       {/* Loading Dialog with improved animation */}
       <AlertDialog open={isAnalyzing}>
         <AlertDialogContent className="bg-gradient-to-br from-violet-600 to-indigo-600 border-0 text-white overflow-hidden p-8 rounded-2xl shadow-xl">
@@ -829,86 +856,86 @@ const IconSuggestion = () => (
         </AlertDialogContent>
       </AlertDialog>
   
-      {/* Success Dialog */}
-      <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <AlertDialogContent
-          className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-8 shadow-2xl border-0 overflow-hidden"
-          style={persianFontStyle}
+{/* Success Dialog */}
+<AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+  <AlertDialogContent
+    className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl p-8 shadow-2xl border-0 overflow-hidden"
+    style={persianFontStyle}
+  >
+    <motion.div
+      className="absolute inset-0 bg-white/10"
+      animate={{
+        backgroundPosition: ["0% 0%", "100% 100%"],
+      }}
+      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      style={{
+        backgroundSize: "200% 200%",
+        backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%)"
+      }}
+    />
+    <motion.div
+      initial={{ scale: 0, rotate: -10 }}
+      animate={{ scale: 1, rotate: 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      onAnimationComplete={() => {
+        // Auto-close after animation completes
+        setTimeout(() => {
+          setShowSuccessDialog(false);
+        }, 2000);
+      }}
+    >
+      <div className="flex justify-center mb-6">
+        <motion.div
+          animate={{
+            y: [0, -10, 0],
+            scale: [1, 1.1, 1]
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
         >
           <motion.div
-            className="absolute inset-0 bg-white/10"
-            animate={{
-              backgroundPosition: ["0% 0%", "100% 100%"],
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            style={{ 
-              backgroundSize: "200% 200%", 
-              backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%)" 
-            }}
-          />
-          <motion.div
-            initial={{ scale: 0, rotate: -10 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", delay: 0.2 }}
+            className="bg-white/30 p-4 rounded-full"
           >
-            <div className="flex justify-center mb-6">
-              <motion.div
-                animate={{ 
-                  y: [0, -10, 0],
-                  scale: [1, 1.1, 1]
-                }}
-                transition={{ 
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut" 
-                }}
-              >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", delay: 0.2 }}
-                  className="bg-white/30 p-4 rounded-full"
-                >
-                  <CheckCircle className="w-16 h-16 text-white" />
-                </motion.div>
-              </motion.div>
-            </div>
-            <AlertDialogHeader>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <AlertDialogTitle className="text-3xl font-bold mb-2 text-center">
-                  {persianLabels.analysisComplete}
-                </AlertDialogTitle>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                <AlertDialogDescription className="text-gray-100 text-lg text-center">
-                  <span className="font-bold text-2xl">{transactions.length}</span> {persianLabels.cardsAnalyzed}
-                </AlertDialogDescription>
-              </motion.div>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="mt-6">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full"
-              >
-                <AlertDialogAction 
-                  className="bg-white text-emerald-600 hover:bg-gray-100 py-3 px-6 rounded-lg font-medium shadow-lg w-full"
-                >
-                  {persianLabels.great}
-                </AlertDialogAction>
-              </motion.div>
-            </AlertDialogFooter>
+            <CheckCircle className="w-16 h-16 text-white" />
           </motion.div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </motion.div>
+      </div>
+      <AlertDialogHeader>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <AlertDialogTitle className="text-3xl font-bold mb-2 text-center">
+            {persianLabels.analysisComplete}
+          </AlertDialogTitle>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <AlertDialogDescription className="text-gray-100 text-lg text-center">
+            <span className="font-bold text-2xl">{transactions.length}</span> {persianLabels.cardsAnalyzed}
+          </AlertDialogDescription>
+        </motion.div>
+         <motion.p 
+        className="text-center text-sm text-white/80 mt-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+      >
+تا لحظاتی دیگر نتایج نمایش داده خواهد شد      </motion.p>
+      </AlertDialogHeader>
+    </motion.div>
+  </AlertDialogContent>
+</AlertDialog>
   
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -1308,7 +1335,7 @@ const IconSuggestion = () => (
                 }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
-                CAPRICORN ©
+                Mehrshad ©
               </motion.span>
             </div>
           </CardFooter>

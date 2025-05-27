@@ -333,7 +333,7 @@ const LoginPage = ({ onLogin, isDarkMode, onToggleDarkMode, showError, onCloseEr
                 animate={{ opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 3, repeat: Infinity }}
               >
-                <span>CAPRICORN ©</span>
+                <span>Mehrshad ©</span>
                 <span>All Rights Reserved: Capt. Esmaeili</span>
               </motion.div>
             </CardFooter>

@@ -4,6 +4,7 @@ import BankCardAnalyzer from './components/BankCardAnalyzer';
 import ProfileManager from './components/ProfileManager';
 
 
+
 const App = () => {
   // Initialize dark mode to true by default
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -18,6 +19,21 @@ const App = () => {
   
   const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
   const [showError, setShowError] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+useEffect(() => {
+  let timer;
+  if (showSuccessDialog) {
+    timer = setTimeout(() => {
+      setShowSuccessDialog(false);
+    }, 3000); // 3 seconds total (0.5s delay + 2.5s progress bar)
+  }
+  return () => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+        setShowSuccessDialog(true);
+  };
+}, [showSuccessDialog]);
 
   // Apply dark mode to document root
   useEffect(() => {
